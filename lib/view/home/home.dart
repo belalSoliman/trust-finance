@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:trust_finiance/view/home/widget/Todays_Collections.dart';
 import 'package:trust_finiance/view/home/widget/current_date.dart';
+import 'package:trust_finiance/view/home/widget/custom_fab.dart';
 import 'package:trust_finiance/view/home/widget/customer_list.dart';
 
 class Home extends StatefulWidget {
@@ -16,13 +17,7 @@ class _HomeState extends State<Home> {
     return Scaffold(
       appBar: _buildAppBar(),
       body: _buildBody(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          //todo :add your action here
-        },
-        child: const Icon(Icons.add),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingBtn(),
     );
   }
 }

@@ -25,7 +25,7 @@ class CustomerItem extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: theme.colorScheme.outline.withValues(alpha: 26),
+          color: theme.colorScheme.outline.withValues(alpha: 230),
         ),
       ),
       child: InkWell(
