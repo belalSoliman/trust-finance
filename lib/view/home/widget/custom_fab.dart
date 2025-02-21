@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trust_finiance/utils/navigation/routes.dart';
 
 class FloatingBtn extends StatefulWidget {
   const FloatingBtn({super.key});
@@ -70,15 +71,15 @@ class _FloatingBtnState extends State<FloatingBtn>
       switch (title) {
         case 'Add Customer':
           print('Add Customer');
-          // Navigator.pushNamed(context, Routes.addCustomerPage);
+          Navigator.pushNamed(context, Routes.addCustomer);
           break;
         case 'Add Payment':
           print('Add Payment');
-          // Navigator.pushNamed(context, Routes.addPaymentPage);
+          Navigator.pushNamed(context, Routes.addPayment);
           break;
         case 'Add Invoice':
           print('Add Invoice');
-          // Navigator.pushNamed(context, Routes.creatingInvoicePage);
+          Navigator.pushNamed(context, Routes.createInovice);
           break;
       }
     });
