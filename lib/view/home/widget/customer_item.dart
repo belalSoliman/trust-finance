@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trust_finiance/view/home/widget/customer_page_view.dart';
 
 class CustomerItem extends StatelessWidget {
   final String name;
@@ -29,7 +30,22 @@ class CustomerItem extends StatelessWidget {
         ),
       ),
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CustomerDetailsPage(
+                customer: {
+                  'name': name,
+                  'address': address,
+                  'balance': balance,
+                  'phone': '123-456-7890', // Replace with actual phone
+                  'storeName': 'Store Name', // Replace with actual store name
+                },
+              ),
+            ),
+          );
+        },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
