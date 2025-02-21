@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "128586374382",
+    "project_id": "trust-finance-6d1ea",
+    "storage_bucket": "trust-finance-6d1ea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:128586374382:android:ea82970f9eeaa6d41c67ff",
+        "android_client_info": {
+          "package_name": "com.example.trust_finiance"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqfkkQOH1-6VsCga-jez2YJA_fgeDNSIw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
