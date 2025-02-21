@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:trust_finiance/view/home/widget/Todays_Collections.dart';
 import 'package:trust_finiance/view/home/widget/current_date.dart';
 import 'package:trust_finiance/view/home/widget/custom_fab.dart';
-import 'package:trust_finiance/view/home/widget/customer_list.dart';
+import 'package:trust_finiance/view/customer/customer_list.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});

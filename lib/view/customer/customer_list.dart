@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:trust_finiance/view/home/widget/customer_item.dart';
+import 'package:trust_finiance/view/customer/widget/customer_item.dart';
 
 class CustomerList extends StatelessWidget {
   const CustomerList({super.key});
