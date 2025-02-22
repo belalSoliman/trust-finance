@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trust_finiance/utils/constant/app_const.dart';
 import 'package:trust_finiance/view/customer/widget/customer_item.dart';
 
 class CustomerList extends StatelessWidget {
@@ -76,7 +77,7 @@ class CustomerList extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'All Customers',
+                    AppConst.allCustomer,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trust_finiance/utils/constant/app_const.dart';
 import 'package:trust_finiance/view/home/widget/Todays_Collections.dart';
 import 'package:trust_finiance/view/home/widget/current_date.dart';
 import 'package:trust_finiance/view/home/widget/custom_fab.dart';
@@ -24,7 +25,7 @@ class _HomeState extends State<Home> {
 
 AppBar _buildAppBar() {
   return AppBar(
-    title: const Text('Trust Finance'),
+    title: const Text(AppConst.homeTitle),
   );
 }
 

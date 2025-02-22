@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:trust_finiance/utils/constant/app_const.dart';
 import 'package:trust_finiance/view/home/widget/add_customer.dart';
 
 enum PaymentMethod {
-  vodafoneCash('Vodafone Cash', Icons.phone_android_outlined),
-  instaPay('InstaPay', Icons.payment_outlined),
-  direct('Direct Payment', Icons.money_outlined);
+  vodafoneCash(AppConst.vodafoneCash, Icons.phone_android_outlined),
+  instaPay(AppConst.instaPay, Icons.payment_outlined),
+  direct(AppConst.directPayment, Icons.money_outlined);
 
   final String label;
   final IconData icon;
@@ -70,7 +71,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Add Payment',
+          AppConst.addpayment,
           style: theme.textTheme.titleLarge?.copyWith(
             color: theme.colorScheme.onPrimary,
           ),
@@ -117,7 +118,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Customer Details',
+                  AppConst.customerDetails,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -125,7 +126,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
                 TextButton.icon(
                   onPressed: _addNewCustomer,
                   icon: const Icon(Icons.person_add_outlined),
-                  label: const Text('New Customer'),
+                  label: const Text(AppConst.addCustomer),
                 ),
               ],
             ),
@@ -133,7 +134,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
             DropdownButtonFormField<Map<String, dynamic>>(
               value: _selectedCustomer,
               decoration: InputDecoration(
-                labelText: 'Select Customer',
+                labelText: AppConst.selectCustomer,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -149,7 +150,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
                 setState(() => _selectedCustomer = value);
               },
               validator: (value) =>
-                  value == null ? 'Please select a customer' : null,
+                  value == null ? AppConst.selectCustomer : null,
             ),
             if (_selectedCustomer != null) ...[
               const SizedBox(height: 16),
@@ -166,17 +167,17 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
       children: [
         ListTile(
           leading: const Icon(Icons.phone_outlined),
-          title: Text(_selectedCustomer!['phone']),
+          title: Text(_selectedCustomer![AppConst.phoneNumberLabel]),
           dense: true,
         ),
         ListTile(
           leading: const Icon(Icons.store_outlined),
-          title: Text(_selectedCustomer!['storeName']),
+          title: Text(_selectedCustomer![AppConst.storeNameLabel]),
           dense: true,
         ),
         ListTile(
           leading: const Icon(Icons.location_on_outlined),
-          title: Text(_selectedCustomer!['address']),
+          title: Text(_selectedCustomer![AppConst.addressLabel]),
           dense: true,
         ),
       ],
@@ -198,7 +199,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Payment Details',
+              AppConst.paymentDetails,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -207,7 +208,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
             TextFormField(
               controller: _amountController,
               decoration: InputDecoration(
-                labelText: 'Amount',
+                labelText: AppConst.paymentAmount,
                 prefixIcon: const Icon(Icons.attach_money_outlined),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -216,17 +217,17 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
               keyboardType: TextInputType.number,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Please enter amount';
+                  return AppConst.pleaseEnterAmount;
                 }
                 if (double.tryParse(value) == null) {
-                  return 'Please enter a valid amount';
+                  return AppConst.pleaseEnterValidAmount;
                 }
                 return null;
               },
             ),
             const SizedBox(height: 16),
             Text(
-              'Payment Method',
+              AppConst.paymentMethod,
               style: theme.textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
@@ -252,7 +253,7 @@ class _AddPaymentPageState extends State<AddPaymentPage> {
             TextFormField(
               controller: _noteController,
               decoration: InputDecoration(
-                labelText: 'Note (Optional)',
+                labelText: AppConst.note,
                 prefixIcon: const Icon(Icons.note_outlined),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),

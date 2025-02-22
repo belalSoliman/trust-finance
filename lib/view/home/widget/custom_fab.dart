@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trust_finiance/utils/constant/app_const.dart';
 import 'package:trust_finiance/utils/navigation/routes.dart';
 
 class FloatingBtn extends StatefulWidget {
@@ -14,19 +15,20 @@ class _FloatingBtnState extends State<FloatingBtn>
   late AnimationController _animationController;
   final List<Map<String, dynamic>> _menuItems = [
     {
-      'title': 'Add Customer',
+      'title': AppConst.addCustomer,
       'icon': Icons.person_add,
       'color': const Color(0xFFFF8DA1), // Primary pink
     },
     {
-      'title': 'Add Payment',
+      'title': AppConst.addPayment,
       'icon': Icons.payment,
       'color': const Color.fromARGB(255, 240, 177, 193), // Secondary pink
     },
     {
-      'title': 'Add Invoice',
+      'title': AppConst.addInvoice,
       'icon': Icons.receipt,
-      'color': const Color(0xFFE5C1CD), // Dusty rose
+      'color': const Color(0xFFE5C1CD),
+      // Dusty rose
     },
   ];
 

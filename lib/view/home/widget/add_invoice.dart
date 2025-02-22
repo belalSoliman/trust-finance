@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:trust_finiance/utils/constant/app_const.dart';
 
 class CreateInvoicePage extends StatefulWidget {
   const CreateInvoicePage({super.key});
@@ -48,7 +49,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Create Invoice',
+          AppConst.createInvoice,
           style: theme.textTheme.titleLarge?.copyWith(
             color: theme.colorScheme.onPrimary,
           ),
@@ -81,7 +82,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addItem,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Item'),
+        label: const Text(AppConst.addInvoiceItem),
       ),
     );
   }
@@ -99,7 +100,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Customer Details',
+              AppConst.customerDetails,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -108,7 +109,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
             TextFormField(
               controller: _customerNameController,
               decoration: InputDecoration(
-                labelText: 'Customer Name',
+                labelText: AppConst.customerNameLabel,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -119,7 +120,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
             TextFormField(
               controller: _customerNumberController,
               decoration: InputDecoration(
-                labelText: 'Customer Number',
+                labelText: AppConst.phoneNumberLabel,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -131,7 +132,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
             TextFormField(
               controller: _customerAddressController,
               decoration: InputDecoration(
-                labelText: 'Address',
+                labelText: AppConst.addressLabel,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -163,7 +164,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                   child: TextFormField(
                     controller: _invoiceNumberController,
                     decoration: InputDecoration(
-                      labelText: 'Invoice #',
+                      labelText: AppConst.invoiceNumber,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -200,7 +201,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Items',
+              AppConst.item,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -209,7 +210,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
             if (_items.isEmpty)
               Center(
                 child: Text(
-                  'No items added yet',
+                  AppConst.noItemAddedYet,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
@@ -251,7 +252,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Total',
+                    AppConst.totalAmount,
                     style: theme.textTheme.titleLarge,
                   ),
                   Text(
@@ -341,13 +342,13 @@ class _AddItemSheetState extends State<_AddItemSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Add Item',
+              AppConst.addInvoiceItem,
               style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Item Name'),
+              decoration: InputDecoration(labelText: AppConst.itemName),
               validator: (value) => value?.isEmpty == true ? 'Required' : null,
             ),
             const SizedBox(height: 12),
@@ -356,7 +357,8 @@ class _AddItemSheetState extends State<_AddItemSheet> {
                 Expanded(
                   child: TextFormField(
                     controller: _quantityController,
-                    decoration: const InputDecoration(labelText: 'Quantity'),
+                    decoration:
+                        const InputDecoration(labelText: AppConst.quantity),
                     keyboardType: TextInputType.number,
                     validator: (value) =>
                         value?.isEmpty == true ? 'Required' : null,
@@ -366,7 +368,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
                 Expanded(
                   child: TextFormField(
                     controller: _priceController,
-                    decoration: const InputDecoration(labelText: 'Price'),
+                    decoration: InputDecoration(labelText: AppConst.price),
                     keyboardType: TextInputType.number,
                     validator: (value) =>
                         value?.isEmpty == true ? 'Required' : null,
@@ -388,7 +390,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
                   Navigator.pop(context);
                 }
               },
-              child: const Text('Add Item'),
+              child: Text(AppConst.addInvoiceItem),
             ),
           ],
         ),

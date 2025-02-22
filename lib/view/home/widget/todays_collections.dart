@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trust_finiance/utils/constant/app_const.dart';
 import 'package:trust_finiance/view/home/widget/customer_collection_day_item.dart';
 
 class TodaysCollections extends StatelessWidget {
@@ -31,7 +32,7 @@ class TodaysCollections extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Today\'s Collections',
+                    AppConst.toDayCollection,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

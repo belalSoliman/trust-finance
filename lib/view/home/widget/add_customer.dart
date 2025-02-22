@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trust_finiance/utils/constant/app_const.dart';
 
 class AddCustomerPage extends StatefulWidget {
   const AddCustomerPage({super.key});
@@ -44,7 +45,7 @@ class _AddCustomerPageState extends State<AddCustomerPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Add Customer',
+          AppConst.addCustomer,
           style: theme.textTheme.titleLarge?.copyWith(
             color: theme.colorScheme.onPrimary,
           ),
@@ -86,7 +87,7 @@ class _AddCustomerPageState extends State<AddCustomerPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Customer Information',
+              AppConst.customerInformation,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -94,14 +95,14 @@ class _AddCustomerPageState extends State<AddCustomerPage> {
             const SizedBox(height: 16),
             _buildTextField(
               controller: _nameController,
-              label: 'Full Name',
+              label: AppConst.customerNameLabel,
               icon: Icons.person_outline_rounded,
               theme: theme,
             ),
             const SizedBox(height: 16),
             _buildTextField(
               controller: _phoneController,
-              label: 'Phone Number',
+              label: AppConst.phoneNumberLabel,
               icon: Icons.phone_outlined,
               theme: theme,
               keyboardType: TextInputType.phone,
@@ -109,14 +110,14 @@ class _AddCustomerPageState extends State<AddCustomerPage> {
             const SizedBox(height: 16),
             _buildTextField(
               controller: _storeNameController,
-              label: 'Store Name',
+              label: AppConst.storeNameLabel,
               icon: Icons.store_outlined,
               theme: theme,
             ),
             const SizedBox(height: 16),
             _buildTextField(
               controller: _addressController,
-              label: 'Address',
+              label: AppConst.addressLabel,
               icon: Icons.location_on_outlined,
               theme: theme,
               maxLines: 3,

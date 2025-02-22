@@ -1,5 +1,6 @@
 //the app widget
 import 'package:flutter/material.dart';
+import 'package:trust_finiance/utils/constant/app_const.dart';
 import 'package:trust_finiance/utils/navigation/app_route.dart';
 import 'package:trust_finiance/utils/theme.dart';
 import 'package:trust_finiance/view/home/home.dart';
@@ -12,7 +13,7 @@ class TrustApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Trust Finance',
+      title: AppConst.appName,
       theme: AppTheme.lightTheme,
       themeMode: ThemeMode.system,
       home: const Home(),
