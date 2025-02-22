@@ -13,6 +13,7 @@ class TrustApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: AppConst.appName,
       theme: AppTheme.lightTheme,
       themeMode: ThemeMode.system,
