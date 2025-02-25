@@ -1,0 +1,2 @@
+D:/trust_finiance/android/app/.cxx/Debug/4i5n535x/x86_64/CMakeFiles/edit_cache.dir
+D:/trust_finiance/android/app/.cxx/Debug/4i5n535x/x86_64/CMakeFiles/rebuild_cache.dir
