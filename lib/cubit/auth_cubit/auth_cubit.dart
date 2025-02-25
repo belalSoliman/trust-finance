@@ -23,17 +23,15 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> checkInitialSetup() async {
     try {
       emit(const AuthLoading());
+
       // Check if user is already logged in
-      _authRepository.currentUser.listen(
-        (user) {
-          if (user != null) {
-            emit(Authenticated(user));
-          } else {
-            emit(const UnAuthenticated());
-          }
-        },
-        onError: (error) => emit(AuthError(error.toString())),
-      );
+      final persistedUser = await _authRepository.checkAuthStatus();
+      if (persistedUser != null) {
+        emit(Authenticated(persistedUser));
+        return;
+      }
+
+      emit(const UnAuthenticated());
     } catch (e) {
       emit(AuthError(e.toString()));
     }

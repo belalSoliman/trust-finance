@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 
 class AuthRepository {
@@ -60,6 +61,30 @@ class AuthRepository {
     }
   }
 
+  Future<UserModel?> checkAuthStatus() async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) return null;
+
+      final doc =
+          await _firestore.collection('users').doc(currentUser.uid).get();
+
+      if (!doc.exists) return null;
+
+      final user = UserModel.fromFirestore(doc);
+      if (!user.isActive) {
+        await _auth.signOut();
+        return null;
+      }
+
+      debugPrint('Auto-login successful for: ${user.email}');
+      return user;
+    } catch (e) {
+      debugPrint('Check auth status error: $e');
+      return null;
+    }
+  }
+
   // Sign in with email and password
   Future<UserModel> signIn(String email, String password) async {
     try {
@@ -68,25 +93,48 @@ class AuthRepository {
         password: password,
       );
 
-      final doc =
-          await _firestore.collection('users').doc(credential.user!.uid).get();
+      if (credential.user == null) {
+        debugPrint('Authentication failed: No user returned');
+        throw 'Authentication failed';
+      }
 
+      debugPrint('Auth successful for UID: ${credential.user!.uid}');
+
+      final docRef = _firestore.collection('users').doc(credential.user!.uid);
+      final doc = await docRef.get();
+
+      debugPrint('Firestore document exists: ${doc.exists}');
       if (!doc.exists) {
-        await _auth.signOut();
-        throw 'User data not found';
+        debugPrint('Creating default user document');
+        // Create user document if it doesn't exist
+        final newUser = UserModel(
+          uid: credential.user!.uid,
+          email: credential.user!.email!,
+          name: credential.user!.displayName ?? 'User',
+          role: UserRole.cashier, // Default role
+          isActive: true,
+        );
+
+        await docRef.set(newUser.toMap());
+        return newUser;
       }
 
       final user = UserModel.fromFirestore(doc);
+      debugPrint('User role: ${user.role}');
+      debugPrint('User active status: ${user.isActive}');
 
       if (!user.isActive) {
         await _auth.signOut();
         throw 'Account is disabled';
       }
 
+      debugPrint('User signed in successfully: ${user.email}');
       return user;
     } on FirebaseAuthException catch (e) {
+      debugPrint('Firebase Auth Error: ${e.code} - ${e.message}');
       throw _handleAuthError(e);
     } catch (e) {
+      debugPrint('Sign in error: $e');
       throw 'An error occurred: $e';
     }
   }

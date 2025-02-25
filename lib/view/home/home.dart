@@ -55,9 +55,9 @@ Widget _buildDrawer(BuildContext context) {
     child: ListView(
       padding: EdgeInsets.zero,
       children: [
-        const DrawerHeader(
+        DrawerHeader(
           decoration: BoxDecoration(
-            color: Colors.blue,
+            color: Theme.of(context).colorScheme.primary,
           ),
           child: Text(
             AppConst.appName,
