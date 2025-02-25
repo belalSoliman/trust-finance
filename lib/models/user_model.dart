@@ -1,6 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum UserRole { superAdmin, manager, cashier }
+enum UserRole {
+  superAdmin,
+  manager,
+  cashier;
+
+  static UserRole fromString(String value) {
+    return UserRole.values.firstWhere(
+      (role) => role.name.toLowerCase() == value.toLowerCase(),
+      orElse: () => UserRole.cashier,
+    );
+  }
+}
 
 class UserModel {
   final String uid;
@@ -23,10 +34,7 @@ class UserModel {
       uid: doc.id,
       email: data['email'] ?? '',
       name: data['name'] ?? '',
-      role: UserRole.values.firstWhere(
-        (role) => role.name == data['role'],
-        orElse: () => UserRole.cashier,
-      ),
+      role: UserRole.fromString(data['role'] ?? ''),
       isActive: data['isActive'] ?? true,
     );
   }

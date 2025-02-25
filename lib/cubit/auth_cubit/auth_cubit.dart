@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../repos/auth_repo.dart';
 import '../../models/user_model.dart';
@@ -37,6 +38,15 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  bool get isSuperAdmin {
+    if (state is Authenticated) {
+      final user = (state as Authenticated).user;
+      debugPrint('Current user role: ${user.role}'); // Debug print
+      return user.role == UserRole.superAdmin;
+    }
+    return false;
+  }
+
   Future<void> signOut() async {
     try {
       emit(const AuthLoading());
@@ -73,11 +83,6 @@ class AuthCubit extends Cubit<AuthState> {
     } catch (e) {
       emit(AuthError(e.toString()));
     }
-  }
-
-  bool get isSuperAdmin {
-    return state is Authenticated &&
-        (state as Authenticated).user.role == UserRole.superAdmin;
   }
 
   void checkCurrentUser() {
