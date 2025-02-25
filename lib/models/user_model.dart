@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:trust_finiance/utils/user_role.dart';
+
+enum UserRole { superAdmin, manager, cashier }
 
 class UserModel {
   final String uid;
@@ -7,16 +8,14 @@ class UserModel {
   final String name;
   final UserRole role;
   final bool isActive;
-  final DateTime createdAt;
 
-  UserModel({
+  const UserModel({
     required this.uid,
     required this.email,
     required this.name,
     required this.role,
     this.isActive = true,
-    DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+  });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -25,11 +24,10 @@ class UserModel {
       email: data['email'] ?? '',
       name: data['name'] ?? '',
       role: UserRole.values.firstWhere(
-        (r) => r.name == data['role'],
+        (role) => role.name == data['role'],
         orElse: () => UserRole.cashier,
       ),
       isActive: data['isActive'] ?? true,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
     );
   }
 
@@ -38,6 +36,5 @@ class UserModel {
         'name': name,
         'role': role.name,
         'isActive': isActive,
-        'createdAt': Timestamp.fromDate(createdAt),
       };
 }
