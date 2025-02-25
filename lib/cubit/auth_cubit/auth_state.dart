@@ -16,6 +16,10 @@ class AuthLoading extends AuthState {
   const AuthLoading();
 }
 
+class NeedsSuperAdmin extends AuthState {
+  const NeedsSuperAdmin();
+}
+
 class Authenticated extends AuthState {
   final UserModel user;
   const Authenticated(this.user);

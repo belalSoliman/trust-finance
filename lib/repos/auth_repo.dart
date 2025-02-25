@@ -20,6 +20,20 @@ class AuthRepository {
       return UserModel.fromFirestore(doc);
     });
   }
+
+  Future<bool> checkSuperAdminExists() async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: UserRole.superAdmin.name)
+          .limit(1)
+          .get();
+
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      throw 'Failed to check super admin: $e';
+    }
+  }
   //create user
   // Add this method to your AuthRepository class
 

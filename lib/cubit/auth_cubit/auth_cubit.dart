@@ -20,6 +20,32 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  Future<void> checkInitialSetup() async {
+    try {
+      emit(const AuthLoading());
+
+      final hasSuperAdmin = await _authRepository.checkSuperAdminExists();
+
+      if (!hasSuperAdmin) {
+        emit(const NeedsSuperAdmin());
+      } else {
+        // Check if user is already logged in
+        _authRepository.currentUser.listen(
+          (user) {
+            if (user != null) {
+              emit(Authenticated(user));
+            } else {
+              emit(const UnAuthenticated());
+            }
+          },
+          onError: (error) => emit(AuthError(error.toString())),
+        );
+      }
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
   Future<void> signOut() async {
     try {
       emit(const AuthLoading());
