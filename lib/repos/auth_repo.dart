@@ -20,6 +20,44 @@ class AuthRepository {
       return UserModel.fromFirestore(doc);
     });
   }
+  //create user
+  // Add this method to your AuthRepository class
+
+  Future<void> createUser({
+    required String email,
+    required String password,
+    required String name,
+    required UserRole role,
+    required UserModel currentUser,
+  }) async {
+    if (currentUser.role != UserRole.superAdmin) {
+      throw 'Only super admin can create users';
+    }
+
+    try {
+      // Create user in Firebase Auth
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Create user document in Firestore
+      final newUser = UserModel(
+        uid: credential.user!.uid,
+        email: email,
+        name: name,
+        role: role,
+        isActive: true,
+      );
+
+      await _firestore
+          .collection('users')
+          .doc(newUser.uid)
+          .set(newUser.toMap());
+    } catch (e) {
+      throw 'Failed to create user: $e';
+    }
+  }
 
   // Sign in with email and password
   Future<UserModel> signIn(String email, String password) async {

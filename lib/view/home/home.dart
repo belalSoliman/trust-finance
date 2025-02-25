@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:trust_finiance/cubit/auth_cubit/auth_cubit.dart';
 import 'package:trust_finiance/utils/constant/app_const.dart';
+import 'package:trust_finiance/view/auth/create_user.dart';
 import 'package:trust_finiance/view/home/widget/Todays_Collections.dart';
 import 'package:trust_finiance/view/home/widget/current_date.dart';
 import 'package:trust_finiance/view/home/widget/custom_fab.dart';
@@ -17,6 +20,7 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(),
+      drawer: _buildDrawer(context),
       body: _buildBody(),
       floatingActionButton: FloatingBtn(),
     );
@@ -42,6 +46,49 @@ Widget _buildBody() {
           CustomerList(),
         ],
       ),
+    ),
+  );
+}
+
+Widget _buildDrawer(BuildContext context) {
+  return Drawer(
+    child: ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        const DrawerHeader(
+          decoration: BoxDecoration(
+            color: Colors.blue,
+          ),
+          child: Text(
+            AppConst.appName,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+            ),
+          ),
+        ),
+        if (context.read<AuthCubit>().isSuperAdmin)
+          ListTile(
+            leading: const Icon(Icons.person_add),
+            title: const Text('Create User'),
+            onTap: () {
+              Navigator.pop(context); // Close drawer
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateUserPage(),
+                ),
+              );
+            },
+          ),
+        ListTile(
+          leading: const Icon(Icons.logout),
+          title: const Text('Logout'),
+          onTap: () {
+            context.read<AuthCubit>().signOut();
+          },
+        ),
+      ],
     ),
   );
 }
