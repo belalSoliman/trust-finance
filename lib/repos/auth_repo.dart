@@ -88,54 +88,138 @@ class AuthRepository {
   // Sign in with email and password
   Future<UserModel> signIn(String email, String password) async {
     try {
+      // First authenticate with Firebase Auth
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
       if (credential.user == null) {
-        debugPrint('Authentication failed: No user returned');
         throw 'Authentication failed';
       }
 
-      debugPrint('Auth successful for UID: ${credential.user!.uid}');
+      final uid = credential.user!.uid;
+      debugPrint('Auth successful for UID: $uid');
 
-      final docRef = _firestore.collection('users').doc(credential.user!.uid);
-      final doc = await docRef.get();
+      // Get user document from Firestore
+      try {
+        // Check if a document with this email already exists
+        final emailQuery = await _firestore
+            .collection('users')
+            .where('email', isEqualTo: email)
+            .where('role', isEqualTo: 'superAdmin')
+            .get();
 
-      debugPrint('Firestore document exists: ${doc.exists}');
-      if (!doc.exists) {
-        debugPrint('Creating default user document');
-        // Create user document if it doesn't exist
-        final newUser = UserModel(
-          uid: credential.user!.uid,
-          email: credential.user!.email!,
-          name: credential.user!.displayName ?? 'User',
-          role: UserRole.cashier, // Default role
-          isActive: true,
-        );
+        if (emailQuery.docs.isNotEmpty) {
+          debugPrint('Found superAdmin document by email');
 
-        await docRef.set(newUser.toMap());
-        return newUser;
+          // Get the document data
+          final existingDoc = emailQuery.docs.first;
+          final data = existingDoc.data();
+
+          // If document ID doesn't match auth UID, create a new document with the auth UID
+          if (existingDoc.id != uid) {
+            debugPrint('Updating document ID to match auth UID');
+
+            await _firestore.collection('users').doc(uid).set(data);
+
+            // Don't delete old document to prevent data loss
+            // Just update the document we're using
+          }
+
+          // Return the user model with superAdmin role
+          return UserModel(
+            uid: uid,
+            email: email,
+            name: data['name'] ?? 'User',
+            role: UserRole.superAdmin,
+            isActive: data['isActive'] ?? true,
+          );
+        }
+
+        // If no superAdmin document found, check for document with matching UID
+        final userDoc = await _firestore.collection('users').doc(uid).get();
+
+        if (userDoc.exists) {
+          debugPrint('Found existing user document by UID');
+          final user = UserModel.fromFirestore(userDoc);
+
+          // Check if we need to update role to superAdmin
+          if (user.role != UserRole.superAdmin) {
+            // Check if there's a superAdmin doc with this email elsewhere
+            final adminQuery = await _firestore
+                .collection('users')
+                .where('email', isEqualTo: email)
+                .where('role', isEqualTo: 'superAdmin')
+                .get();
+
+            if (adminQuery.docs.isNotEmpty) {
+              // Update this document to be superAdmin
+              await _firestore.collection('users').doc(uid).update({
+                'role': 'superAdmin',
+                'name': adminQuery.docs.first.data()['name'] ?? user.name
+              });
+
+              // Return updated user
+              return UserModel(
+                uid: uid,
+                email: email,
+                name: adminQuery.docs.first.data()['name'] ?? user.name,
+                role: UserRole.superAdmin,
+                isActive: true,
+              );
+            }
+            return user;
+          }
+          return user;
+        } else {
+          // Create new user document if it doesn't exist
+          debugPrint('Creating new user document');
+
+          // Check if there's a document with this email first
+          final emailQuery = await _firestore
+              .collection('users')
+              .where('email', isEqualTo: email)
+              .get();
+
+          if (emailQuery.docs.isNotEmpty) {
+            // Use existing data but with new UID
+            final data = emailQuery.docs.first.data();
+
+            final newUser = UserModel(
+              uid: uid,
+              email: email,
+              name: data['name'] ?? 'User',
+              role: UserRole.fromString(data['role'] ?? 'cashier'),
+              isActive: data['isActive'] ?? true,
+            );
+
+            await _firestore.collection('users').doc(uid).set(newUser.toMap());
+            return newUser;
+          }
+
+          // No existing document, create new
+          final newUser = UserModel(
+            uid: uid,
+            email: email,
+            name: credential.user!.displayName ?? 'User',
+            role: UserRole.cashier,
+            isActive: true,
+          );
+
+          await _firestore.collection('users').doc(uid).set(newUser.toMap());
+          return newUser;
+        }
+      } catch (e) {
+        debugPrint('Firestore error: $e');
+        throw 'Error accessing user data: $e';
       }
-
-      final user = UserModel.fromFirestore(doc);
-      debugPrint('User role: ${user.role}');
-      debugPrint('User active status: ${user.isActive}');
-
-      if (!user.isActive) {
-        await _auth.signOut();
-        throw 'Account is disabled';
-      }
-
-      debugPrint('User signed in successfully: ${user.email}');
-      return user;
     } on FirebaseAuthException catch (e) {
-      debugPrint('Firebase Auth Error: ${e.code} - ${e.message}');
+      debugPrint('Auth error: ${e.code} - ${e.message}');
       throw _handleAuthError(e);
     } catch (e) {
       debugPrint('Sign in error: $e');
-      throw 'An error occurred: $e';
+      throw 'Authentication error: $e';
     }
   }
 

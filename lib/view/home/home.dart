@@ -52,121 +52,108 @@ Widget _buildBody() {
 }
 
 Widget _buildDrawer(BuildContext context) {
-  return Drawer(
-    child: ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        DrawerHeader(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                AppConst.appName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+  return BlocBuilder<AuthCubit, AuthState>(
+    builder: (context, state) {
+      final isSuperAdmin = state is Authenticated &&
+          state.user.role.toString() == 'UserRole.superAdmin';
+
+      // Debug logging
+      if (state is Authenticated) {
+        debugPrint('Current user details:');
+        debugPrint('Email: ${state.user.email}');
+        debugPrint('Role: ${state.user.role}');
+        debugPrint('Is Super Admin: $isSuperAdmin');
+      }
+
+      return Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
               ),
-              const SizedBox(height: 8),
-              BlocBuilder<AuthCubit, AuthState>(
-                builder: (context, state) {
-                  if (state is Authenticated) {
-                    return Text(
-                      'Role: ${state.user.role}',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    AppConst.appName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (state is Authenticated)
+                    Text(
+                      'Role: ${state.user.role.name}',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
                       ),
-                    );
-                  }
-                  return const SizedBox();
+                    ),
+                ],
+              ),
+            ),
+            // User Management Section for Super Admin
+            if (isSuperAdmin) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(
+                  'User Management',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.person_add),
+                title: const Text('Create New User'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CreateUserPage(),
+                    ),
+                  );
                 },
               ),
             ],
-          ),
-        ),
-        // User Management Section for Super Admin
-        if (context.read<AuthCubit>().isSuperAdmin) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Text(
-              'User Management',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Logout'),
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Logout'),
+                    content: const Text('Are you sure you want to logout?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          context.read<AuthCubit>().signOut();
+                        },
+                        child: const Text('Logout'),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.person_add),
-            title: const Text('Create New User'),
-            onTap: () {
-              Navigator.pop(context); // Close drawer
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CreateUserPage(),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.people),
-            title: const Text('Manage Users'),
-            onTap: () {
-              Navigator.pop(context);
-              // Navigator.push(
-              //   context,
-              //   // MaterialPageRoute(
-              //   //   builder: (context) =>
-              //   //       const UserListPage(), // You'll need to create this page
-              //   // ),
-              // );
-            },
-          ),
-        ],
-        const Divider(),
-        // Settings and Logout Section
-        ListTile(
-          leading: const Icon(Icons.settings),
-          title: const Text('Settings'),
-          onTap: () {
-            // Add settings navigation
-          },
+          ],
         ),
-        ListTile(
-          leading: const Icon(Icons.logout),
-          title: const Text('Logout'),
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Logout'),
-                content: const Text('Are you sure you want to logout?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      context.read<AuthCubit>().signOut();
-                    },
-                    child: const Text('Logout'),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ],
-    ),
+      );
+    },
   );
 }
