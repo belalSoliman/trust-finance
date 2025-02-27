@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:trust_finiance/utils/navigation/routes.dart';
 import 'package:trust_finiance/view/auth/login_page.dart';
+import 'package:trust_finiance/view/customer/widget/edit_customer_information.dart';
 import 'package:trust_finiance/view/home/home.dart';
 import 'package:trust_finiance/view/home/widget/add_customer.dart';
 import 'package:trust_finiance/view/home/widget/add_invoice.dart';

@@ -1,129 +1,108 @@
 import 'package:flutter/material.dart';
-import 'package:trust_finiance/view/customer/widget/customer_page_view.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CustomerItem extends StatelessWidget {
   final String name;
+  final String phone;
   final String address;
   final double balance;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   const CustomerItem({
-    super.key,
+    Key? key,
     required this.name,
+    required this.phone,
     required this.address,
     required this.balance,
-    this.onTap,
-  });
+    required this.onTap,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isPositive = balance >= 0;
 
     return Card(
-      elevation: 0,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: EdgeInsets.only(bottom: 12.h),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: theme.colorScheme.outline.withValues(alpha: 230),
-        ),
+        borderRadius: BorderRadius.circular(12.r),
       ),
+      elevation: 1,
       child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CustomerDetailsPage(
-                customer: {
-                  'name': name,
-                  'address': address,
-                  'balance': balance,
-                  'phone': '123-456-7890', // Replace with actual phone
-                  'storeName': 'Store Name', // Replace with actual store name
-                },
-              ),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12.r),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16.w),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 4,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isPositive
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.error,
-                  borderRadius: BorderRadius.circular(2),
+              // Customer Avatar
+              CircleAvatar(
+                backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                radius: 24.r,
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16.w),
+
+              // Customer Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       name,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4.h),
+                    Text(
+                      phone,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
                     Text(
                       address,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.grey[600],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: isPositive
-                      ? theme.colorScheme.primary.withOpacity(0.1)
-                      : theme.colorScheme.error.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isPositive
-                        ? theme.colorScheme.primary.withOpacity(0.2)
-                        : theme.colorScheme.error.withOpacity(0.2),
-                    width: 1,
+
+              // Balance
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '\$${balance.abs().toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                      color: balance >= 0 ? Colors.green : Colors.red,
+                    ),
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Balance',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
-                      ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    balance >= 0 ? 'Credit' : 'Debt',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: balance >= 0 ? Colors.green[700] : Colors.red[700],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'EGP ${balance.abs().toStringAsFixed(2)}',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: isPositive
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.error,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -1,227 +1,407 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:trust_finiance/cubit/auth_cubit/auth_cubit.dart';
+import 'package:trust_finiance/cubit/auth_cubit/auth_state.dart';
+import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_cubit.dart';
+import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_state.dart';
+import 'package:trust_finiance/repos/customer_repo.dart';
+import 'package:trust_finiance/view/customer/widget/edit_customer_information.dart';
 
-class CustomerDetailsPage extends StatelessWidget {
-  final Map<String, dynamic> customer;
+class CustomerDetailPage extends StatelessWidget {
+  final String customerId;
 
-  const CustomerDetailsPage({
-    super.key,
-    required this.customer,
-  });
+  const CustomerDetailPage({
+    Key? key,
+    required this.customerId,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    return BlocProvider(
+      create: (context) => CustomerCubit(
+        customerRepository: CustomerRepository(
+          currentUser: (context.read<AuthCubit>().state as Authenticated).user,
+        ),
+      )..loadCustomerDetails(customerId),
+      child: CustomerDetailView(customerId: customerId),
+    );
+  }
+}
 
+class CustomerDetailView extends StatelessWidget {
+  final String customerId;
+
+  const CustomerDetailView({
+    Key? key,
+    required this.customerId,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          customer['name'],
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: theme.colorScheme.onPrimary,
+        title: const Text('Customer Details'),
+        actions: [
+          BlocBuilder<CustomerCubit, CustomerState>(
+            builder: (context, state) {
+              if (state is CustomerDetailLoaded) {
+                return IconButton(
+                  icon: Icon(Icons.edit),
+                  onPressed: () =>
+                      _navigateToEditCustomer(context, state.customer),
+                );
+              }
+              return const SizedBox();
+            },
           ),
-        ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'delete') {
+                _confirmDelete(context);
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, color: Colors.red),
+                    SizedBox(width: 8.w),
+                    Text('Delete', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
+      body: BlocConsumer<CustomerCubit, CustomerState>(
+        listener: (context, state) {
+          if (state is CustomerError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
+          }
+
+          if (state is CustomerActionSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
+
+            // If customer was deleted, go back
+            if (state.message.contains('deleted')) {
+              Navigator.pop(context);
+            }
+          }
+        },
+        builder: (context, state) {
+          if (state is CustomerLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is CustomerDetailLoaded) {
+            final customer = state.customer;
+            return SingleChildScrollView(
+              padding: EdgeInsets.all(16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildCustomerHeader(context, customer),
+                  SizedBox(height: 24.h),
+                  _buildContactInfo(customer),
+                  SizedBox(height: 24.h),
+                  _buildFinancialInfo(customer),
+                  SizedBox(height: 24.h),
+                  if (customer.notes != null && customer.notes!.isNotEmpty)
+                    _buildNotes(customer),
+                ],
+              ),
+            );
+          }
+
+          return Center(
+            child: Text('No customer data found'),
+          );
+        },
+      ),
+      // Add a bottom button for creating a loan for this customer
+      bottomNavigationBar: BlocBuilder<CustomerCubit, CustomerState>(
+        builder: (context, state) {
+          if (state is CustomerDetailLoaded) {
+            return Padding(
+              padding: EdgeInsets.all(16.w),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+                onPressed: () {
+                  // Navigate to create loan page
+                  // Navigator.push(
+                  //   context,
+                  //   MaterialPageRoute(
+                  //     builder: (context) => CreateLoanPage(customerId: customerId),
+                  //   ),
+                  // );
+                },
+                child: Text(
+                  'Add New Loan',
+                  style: TextStyle(fontSize: 16.sp),
+                ),
+              ),
+            );
+          }
+          return const SizedBox();
+        },
+      ),
+    );
+  }
+
+  Widget _buildCustomerHeader(BuildContext context, customer) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      elevation: 2,
+      child: Padding(
+        padding: EdgeInsets.all(16.w),
+        child: Row(
           children: [
-            _buildCustomerInfo(theme),
-            _buildInvoiceList(theme),
+            CircleAvatar(
+              radius: 32.r,
+              backgroundColor:
+                  Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              child: Text(
+                customer.name[0].toUpperCase(),
+                style: TextStyle(
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    customer.name,
+                    style: TextStyle(
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    'Customer ID: ${customer.id.substring(0, 8)}',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    'Added on ${_formatDate(customer.createdAt)}',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCustomerInfo(ThemeData theme) {
+  Widget _buildContactInfo(customer) {
     return Card(
-      elevation: 0,
-      margin: const EdgeInsets.all(16),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: theme.colorScheme.outline.withValues(alpha: 26),
-        ),
+        borderRadius: BorderRadius.circular(16.r),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Customer Information',
-              style: theme.textTheme.titleMedium?.copyWith(
+              'Contact Information',
+              style: TextStyle(
+                fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
-            _buildInfoRow(
-              theme,
-              icon: Icons.store_outlined,
-              label: 'Store Name',
-              value: customer['storeName'],
-            ),
-            _buildInfoRow(
-              theme,
-              icon: Icons.phone_outlined,
-              label: 'Phone',
-              value: customer['phone'],
-            ),
-            _buildInfoRow(
-              theme,
-              icon: Icons.location_on_outlined,
-              label: 'Address',
-              value: customer['address'],
-            ),
-            _buildBalanceCard(theme),
+            SizedBox(height: 16.h),
+            _infoRow(Icons.phone, 'Phone', customer.phone),
+            if (customer.email != null && customer.email!.isNotEmpty)
+              _infoRow(Icons.email, 'Email', customer.email!),
+            if (customer.address != null && customer.address!.isNotEmpty)
+              _infoRow(Icons.location_on, 'Address', customer.address!),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBalanceCard(ThemeData theme) {
-    final isPositive = customer['balance'] >= 0;
-
-    return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isPositive
-            ? theme.colorScheme.primary.withValues(alpha: 26)
-            : theme.colorScheme.error.withValues(alpha: 26),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isPositive
-              ? theme.colorScheme.primary.withValues(alpha: 51)
-              : theme.colorScheme.error.withValues(alpha: 51),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Current Balance',
-            style: theme.textTheme.titleMedium,
-          ),
-          Text(
-            'EGP ${customer['balance'].abs().toStringAsFixed(2)}',
-            style: theme.textTheme.titleLarge?.copyWith(
-              color: isPositive ? Colors.white : theme.colorScheme.error,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInvoiceList(ThemeData theme) {
-    // Replace with actual invoice data from database
-    final List<Map<String, dynamic>> invoices = [];
-
+  Widget _buildFinancialInfo(customer) {
     return Card(
-      elevation: 0,
-      margin: const EdgeInsets.all(16),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: theme.colorScheme.outline.withValues(alpha: 26),
-        ),
+        borderRadius: BorderRadius.circular(16.r),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              'Invoice History',
-              style: theme.textTheme.titleMedium?.copyWith(
+      child: Padding(
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Financial Information',
+              style: TextStyle(
+                fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-          if (invoices.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Text(
-                  'No invoices yet',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 153),
-                  ),
-                ),
-              ),
-            )
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: invoices.length,
-              separatorBuilder: (context, index) => Divider(
-                color: theme.colorScheme.outline.withValues(alpha: 26),
-              ),
-              itemBuilder: (context, index) {
-                final invoice = invoices[index];
-                return ListTile(
-                  title: Text(
-                    'Invoice #${invoice['number']}',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  subtitle: Text(
-                    DateFormat('MMM dd, yyyy').format(invoice['date']),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 153),
-                    ),
-                  ),
-                  trailing: Text(
-                    'EGP ${invoice['amount'].toStringAsFixed(2)}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  onTap: () {
-                    // Navigate to invoice details
-                  },
-                );
-              },
+            SizedBox(height: 16.h),
+            _financialRow('Total Loans', customer.totalLoanAmount),
+            _financialRow('Total Repaid', customer.totalPaidAmount),
+            Divider(height: 24.h),
+            _financialRow(
+              'Outstanding Balance',
+              customer.outstandingBalance,
+              isHighlighted: true,
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildInfoRow(
-    ThemeData theme, {
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
+  Widget _buildNotes(customer) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Notes',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              customer.notes!,
+              style: TextStyle(fontSize: 14.sp),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: 12.h),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: theme.colorScheme.onSurface.withValues(alpha: 153),
-          ),
-          const SizedBox(width: 12),
+          Icon(icon, size: 20.sp, color: Colors.grey),
+          SizedBox(width: 12.w),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 label,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 153),
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  color: Colors.grey,
                 ),
               ),
               Text(
                 value,
-                style: theme.textTheme.bodyLarge,
+                style: TextStyle(fontSize: 16.sp),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _financialRow(String label, double amount,
+      {bool isHighlighted = false}) {
+    final textColor = isHighlighted
+        ? (amount >= 0 ? Colors.green : Colors.red)
+        : Colors.black;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: 8.h),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14.sp,
+              fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          Text(
+            '\$${amount.abs().toStringAsFixed(2)}',
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
+              color: isHighlighted ? textColor : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return "${date.day}/${date.month}/${date.year}";
+  }
+
+  void _navigateToEditCustomer(BuildContext context, customer) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditCustomerPage(customer: customer),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Customer'),
+        content: Text(
+            'Are you sure you want to delete this customer? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('CANCEL'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              context.read<CustomerCubit>().deleteCustomer(customerId);
+            },
+            child: Text('DELETE'),
           ),
         ],
       ),

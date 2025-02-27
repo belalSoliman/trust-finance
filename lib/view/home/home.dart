@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trust_finiance/cubit/auth_cubit/auth_cubit.dart';
 import 'package:trust_finiance/cubit/auth_cubit/auth_state.dart';
+import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_cubit.dart';
+import 'package:trust_finiance/repos/customer_repo.dart';
 import 'package:trust_finiance/utils/constant/app_const.dart';
 import 'package:trust_finiance/view/auth/create_user.dart';
 import 'package:trust_finiance/view/home/widget/Todays_Collections.dart';
@@ -61,7 +63,15 @@ Widget _buildNarrowScreenLayout() {
       SizedBox(height: 20.h), // Responsive height with ScreenUtil
       TodaysCollections(),
       SizedBox(height: 20.h),
-      CustomerList(),
+      BlocProvider(
+        create: (context) => CustomerCubit(
+          customerRepository: CustomerRepository(
+            currentUser:
+                (context.read<AuthCubit>().state as Authenticated).user,
+          ),
+        ),
+        child: CustomerList(),
+      ),
     ],
   );
 }
@@ -84,7 +94,15 @@ Widget _buildWideScreenLayout() {
           // Right side: Customer List
           Expanded(
             flex: 3,
-            child: CustomerList(),
+            child: BlocProvider(
+              create: (context) => CustomerCubit(
+                customerRepository: CustomerRepository(
+                  currentUser:
+                      (context.read<AuthCubit>().state as Authenticated).user,
+                ),
+              ),
+              child: CustomerList(),
+            ),
           ),
         ],
       ),
