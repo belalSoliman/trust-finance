@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trust_finiance/cubit/auth_cubit/auth_cubit.dart';
 import 'package:trust_finiance/cubit/auth_cubit/auth_state.dart';
 import 'package:trust_finiance/utils/constant/app_const.dart';
@@ -19,6 +20,8 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > 600;
     return Scaffold(
       appBar: _buildAppBar(),
       drawer: _buildDrawer(context),
@@ -35,19 +38,57 @@ AppBar _buildAppBar() {
 }
 
 Widget _buildBody() {
-  return SingleChildScrollView(
-    child: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        spacing: 20,
+  return LayoutBuilder(builder: (context, constraints) {
+    // Determine if we're on a tablet/wide screen based on constraints
+    final isWideScreen = constraints.maxWidth > 600;
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.all(16.0.r), // Responsive padding with ScreenUtil
+        child: isWideScreen
+            ? _buildWideScreenLayout()
+            : _buildNarrowScreenLayout(),
+      ),
+    );
+  });
+}
+
+Widget _buildNarrowScreenLayout() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      CurrentDate(),
+      SizedBox(height: 20.h), // Responsive height with ScreenUtil
+      TodaysCollections(),
+      SizedBox(height: 20.h),
+      CustomerList(),
+    ],
+  );
+}
+
+Widget _buildWideScreenLayout() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      CurrentDate(),
+      SizedBox(height: 20.h),
+      Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CurrentDate(),
-          TodaysCollections(),
-          CustomerList(),
+          // Left side: Today's Collections
+          Expanded(
+            flex: 2,
+            child: TodaysCollections(),
+          ),
+          SizedBox(width: 20.w), // Responsive width spacing
+          // Right side: Customer List
+          Expanded(
+            flex: 3,
+            child: CustomerList(),
+          ),
         ],
       ),
-    ),
+    ],
   );
 }
 
@@ -88,7 +129,7 @@ Widget _buildDrawer(BuildContext context) {
                   const SizedBox(height: 8),
                   if (state is Authenticated)
                     Text(
-                      'Role: ${state.user.role.name}',
+                      ' ${state.user.role.name}',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
