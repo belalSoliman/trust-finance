@@ -6,6 +6,7 @@ import 'package:trust_finiance/repos/customer_repo.dart';
 import 'package:trust_finiance/utils/constant/app_const.dart';
 import 'package:trust_finiance/cubit/auth_cubit/auth_cubit.dart';
 import 'package:trust_finiance/cubit/auth_cubit/auth_state.dart';
+import 'package:trust_finiance/view/home/home.dart';
 
 class AddCustomerPage extends StatefulWidget {
   const AddCustomerPage({super.key});
@@ -46,6 +47,8 @@ class _AddCustomerPageState extends State<AddCustomerPage> {
       child: BlocConsumer<CustomerCubit, CustomerState>(
         listener: (context, state) {
           if (state is CustomerActionSuccess) {
+            Home.refreshCustomerList();
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.message)),
             );

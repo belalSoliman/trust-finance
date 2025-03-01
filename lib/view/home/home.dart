@@ -12,7 +12,16 @@ import 'package:trust_finiance/view/home/widget/current_date.dart';
 import 'package:trust_finiance/view/home/widget/custom_fab.dart';
 import 'package:trust_finiance/view/customer/customer_list.dart';
 
+// In home.dart
 class Home extends StatefulWidget {
+  // Static reference to current state
+  static _HomeState? _instance;
+
+  // Static method to refresh customer list
+  static void refreshCustomerList() {
+    _instance?._refreshTrigger.value += 1;
+  }
+
   const Home({super.key});
 
   @override
@@ -20,6 +29,22 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  final ValueNotifier<int> _refreshTrigger = ValueNotifier(0);
+  @override
+  void initState() {
+    super.initState();
+    Home._instance = this;
+  }
+
+  @override
+  void dispose() {
+    if (Home._instance == this) {
+      Home._instance = null;
+    }
+    _refreshTrigger.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -30,6 +55,33 @@ class _HomeState extends State<Home> {
       body: _buildBody(),
       floatingActionButton: FloatingBtn(),
     );
+  }
+
+  Widget _buildCustomerListSection() {
+    return ValueListenableBuilder<int>(
+      valueListenable: _refreshTrigger,
+      builder: (context, refreshCount, _) {
+        // This print helps debug when refreshes happen
+        debugPrint('Building customer list, refresh count: $refreshCount');
+
+        return BlocProvider(
+          // The key forces Flutter to recreate this widget completely when valueListenable changes
+          key: ValueKey('customer_list_$refreshCount'),
+          create: (context) => CustomerCubit(
+            customerRepository: CustomerRepository(
+              currentUser:
+                  (context.read<AuthCubit>().state as Authenticated).user,
+            ),
+          )..loadCustomers(),
+          child: const CustomerList(),
+        );
+      },
+    );
+  }
+
+  void refreshCustomerList() {
+    // Increment the value to trigger a rebuild
+    _refreshTrigger.value += 1;
   }
 }
 
@@ -56,58 +108,52 @@ Widget _buildBody() {
 }
 
 Widget _buildNarrowScreenLayout() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      CurrentDate(),
-      SizedBox(height: 20.h), // Responsive height with ScreenUtil
-      TodaysCollections(),
-      SizedBox(height: 20.h),
-      BlocProvider(
-        create: (context) => CustomerCubit(
-          customerRepository: CustomerRepository(
-            currentUser:
-                (context.read<AuthCubit>().state as Authenticated).user,
-          ),
-        ),
-        child: CustomerList(),
-      ),
-    ],
-  );
+  return Builder(builder: (context) {
+    final homeState = context.findAncestorStateOfType<_HomeState>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CurrentDate(),
+        SizedBox(height: 20.h), // Responsive height with ScreenUtil
+        TodaysCollections(),
+        SizedBox(height: 20.h),
+        // Use the _buildCustomerListSection method from _HomeState
+        homeState!._buildCustomerListSection(),
+      ],
+    );
+  });
 }
 
 Widget _buildWideScreenLayout() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      CurrentDate(),
-      SizedBox(height: 20.h),
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left side: Today's Collections
-          Expanded(
-            flex: 2,
-            child: TodaysCollections(),
-          ),
-          SizedBox(width: 20.w), // Responsive width spacing
-          // Right side: Customer List
-          Expanded(
-            flex: 3,
-            child: BlocProvider(
-              create: (context) => CustomerCubit(
-                customerRepository: CustomerRepository(
-                  currentUser:
-                      (context.read<AuthCubit>().state as Authenticated).user,
-                ),
-              ),
-              child: CustomerList(),
+  return Builder(builder: (context) {
+    final homeState = context.findAncestorStateOfType<_HomeState>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CurrentDate(),
+        SizedBox(height: 20.h),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left side: Today's Collections
+            Expanded(
+              flex: 2,
+              child: TodaysCollections(),
             ),
-          ),
-        ],
-      ),
-    ],
-  );
+            SizedBox(width: 20.w), // Responsive width spacing
+            // Right side: Customer List
+            Expanded(
+              flex: 3,
+              // Use the _buildCustomerListSection method from _HomeState
+              child: homeState!._buildCustomerListSection(),
+            ),
+          ],
+        ),
+      ],
+    );
+  });
 }
 
 Widget _buildDrawer(BuildContext context) {

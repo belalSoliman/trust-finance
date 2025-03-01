@@ -46,10 +46,12 @@ class CustomerCubit extends Cubit<CustomerState> {
     String? address,
     String? notes,
   }) async {
-    try {
-      emit(CustomerLoading());
+    if (isClosed) return;
 
-      final customer = await _customerRepository.addCustomer(
+    try {
+      emit(const CustomerLoading());
+
+      await _customerRepository.addCustomer(
         name: name,
         phone: phone,
         email: email,
@@ -57,12 +59,16 @@ class CustomerCubit extends Cubit<CustomerState> {
         notes: notes,
       );
 
-      emit(CustomerActionSuccess('Customer $name added successfully'));
+      if (!isClosed) {
+        emit(CustomerActionSuccess('Customer $name added successfully'));
 
-      // Important: Load the updated customer list immediately
-      await loadCustomers();
+        // Don't try to load customers here, as that may cause the error
+        // Instead we'll use the ValueNotifier approach
+      }
     } catch (e) {
-      emit(CustomerError(e.toString()));
+      if (!isClosed) {
+        emit(CustomerError(e.toString()));
+      }
     }
   }
 
