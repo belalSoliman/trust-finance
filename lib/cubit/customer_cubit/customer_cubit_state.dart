@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:trust_finiance/models/customer_model.dart';
+import 'package:trust_finiance/models/customer_model/customer_model.dart';
 
 abstract class CustomerState extends Equatable {
   const CustomerState();

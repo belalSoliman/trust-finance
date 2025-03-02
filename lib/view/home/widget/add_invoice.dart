@@ -1,9 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:trust_finiance/cubit/auth_cubit/auth_cubit.dart';
+import 'package:trust_finiance/cubit/auth_cubit/auth_state.dart';
+import 'package:trust_finiance/cubit/invoice_cuibt/invoice_cubit.dart';
+import 'package:trust_finiance/models/customer_model/customer_model.dart';
+import 'package:trust_finiance/models/invoice_model.dart';
+import 'package:trust_finiance/repos/customer_repo.dart';
 import 'package:trust_finiance/utils/constant/app_const.dart';
+import 'package:trust_finiance/view/home/widget/add_customer.dart';
+import 'package:uuid/uuid.dart';
 
 class CreateInvoicePage extends StatefulWidget {
-  const CreateInvoicePage({super.key});
+  // Optional selected customer to pre-fill data
+  final CustomerModel? selectedCustomer;
+
+  const CreateInvoicePage({
+    super.key,
+    this.selectedCustomer,
+  });
 
   @override
   _CreateInvoicePageState createState() => _CreateInvoicePageState();
@@ -11,14 +27,81 @@ class CreateInvoicePage extends StatefulWidget {
 
 class _CreateInvoicePageState extends State<CreateInvoicePage> {
   final _formKey = GlobalKey<FormState>();
+
+  // Controllers for form fields
   final _customerNameController = TextEditingController();
   final _customerAddressController = TextEditingController();
   final _customerNumberController = TextEditingController();
   final _invoiceNumberController = TextEditingController();
+
   DateTime? _selectedDate = DateTime.now();
   final List<InvoiceItem> _items = [];
   double _totalAmount = 0.0;
+  bool _isLoading = false;
 
+  // Selected customer for linking
+  CustomerModel? _selectedCustomer;
+  List<CustomerModel> _customersList = [];
+  bool _isSearching = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Generate a unique invoice number
+    _invoiceNumberController.text =
+        'INV-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+
+    // If a customer was passed in, use their info
+    if (widget.selectedCustomer != null) {
+      _setSelectedCustomer(widget.selectedCustomer!);
+    }
+
+    // Load customers list
+    _loadCustomers();
+  }
+
+  @override
+  void dispose() {
+    _customerNameController.dispose();
+    _customerAddressController.dispose();
+    _customerNumberController.dispose();
+    _invoiceNumberController.dispose();
+    super.dispose();
+  }
+
+  // Load customers for dropdown selection
+  Future<void> _loadCustomers() async {
+    try {
+      final authState = context.read<AuthCubit>().state;
+      if (authState is Authenticated) {
+        final customerRepository =
+            CustomerRepository(currentUser: authState.user);
+        final customers = await customerRepository.getCustomers();
+
+        setState(() {
+          _customersList = customers;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading customers: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading customers: $e')),
+      );
+    }
+  }
+
+  // Set form values from selected customer
+  void _setSelectedCustomer(CustomerModel customer) {
+    setState(() {
+      _selectedCustomer = customer;
+      _customerNameController.text = customer.name;
+      _customerNumberController.text = customer.phone;
+      _customerAddressController.text = customer.address ?? '';
+    });
+  }
+
+  // Update total amount when items change
   void _updateTotal() {
     setState(() {
       _totalAmount =
@@ -26,6 +109,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     });
   }
 
+  // Show bottom sheet to add an item
   void _addItem() {
     showModalBottomSheet(
       context: context,
@@ -39,6 +123,90 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
           });
         },
       ),
+    );
+  }
+
+  // Show customer selection dialog
+
+  Future<void> _showCustomerSelectionDialog() async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Select Customer'),
+              content: SizedBox(
+                width: 10.w,
+                height: MediaQuery.of(context).size.height *
+                    0.5, // Constrain height
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Search field
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Search customers',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          _isSearching = value.isNotEmpty;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Customer list - use Expanded to constrain list size
+                    Expanded(
+                      child: _customersList.isEmpty
+                          ? const Center(child: Text('No customers found'))
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: _customersList.length,
+                              itemBuilder: (context, index) {
+                                final customer = _customersList[index];
+                                return ListTile(
+                                  title: Text(customer.name),
+                                  subtitle: Text(customer.phone),
+                                  onTap: () {
+                                    _setSelectedCustomer(customer);
+                                    Navigator.pop(context);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddCustomerPage(),
+                      ),
+                    );
+                    if (result is CustomerModel) {
+                      _setSelectedCustomer(result);
+                    }
+                  },
+                  child: const Text('Create New Customer'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -57,28 +225,30 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.save_rounded),
-            onPressed: _saveInvoice,
+            onPressed: _isLoading ? null : _saveInvoice,
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildCustomerSection(theme),
-                const SizedBox(height: 16),
-                _buildInvoiceDetails(theme),
-                const SizedBox(height: 16),
-                _buildItemsList(theme),
-              ],
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildCustomerSection(theme),
+                      const SizedBox(height: 16),
+                      _buildInvoiceDetails(theme),
+                      const SizedBox(height: 16),
+                      _buildItemsList(theme),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addItem,
         icon: const Icon(Icons.add_rounded),
@@ -99,12 +269,39 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              AppConst.customerDetails,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  AppConst.customerDetails,
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold, fontSize: 12.sp),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _showCustomerSelectionDialog,
+                  icon: const Icon(Icons.person_search),
+                  label: const Text('Select Customer'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    foregroundColor: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ],
             ),
+            if (_selectedCustomer != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+                child: Chip(
+                  label: Text(_selectedCustomer!.name),
+                  avatar: const Icon(Icons.person),
+                  deleteIcon: const Icon(Icons.close),
+                  onDeleted: () {
+                    setState(() {
+                      _selectedCustomer = null;
+                    });
+                  },
+                ),
+              ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _customerNameController,
@@ -175,9 +372,32 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    'Date: ${DateFormat('MMM dd, yyyy').format(_selectedDate!)}',
-                    style: theme.textTheme.bodyLarge,
+                  child: InkWell(
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedDate!,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null) {
+                        setState(() {
+                          _selectedDate = date;
+                        });
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Invoice Date',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        DateFormat('MMM dd, yyyy').format(_selectedDate!),
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -209,11 +429,24 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
             const SizedBox(height: 16),
             if (_items.isEmpty)
               Center(
-                child: Text(
-                  AppConst.noItemAddedYet,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.shopping_cart_outlined,
+                        size: 48, color: Colors.grey),
+                    const SizedBox(height: 8),
+                    Text(
+                      AppConst.noItemAddedYet,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _addItem,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add First Item'),
+                    ),
+                  ],
                 ),
               )
             else
@@ -226,9 +459,9 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                   final item = _items[index];
                   return ListTile(
                     title: Text(item.name),
-                    subtitle: Text('${item.quantity} x \$${item.price}'),
+                    subtitle: Text('${item.quantity} x \₹${item.price}'),
                     trailing: Text(
-                      '\$${(item.quantity * item.price).toStringAsFixed(2)}',
+                      '\₹${(item.quantity * item.price).toStringAsFixed(2)}',
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.bold,
@@ -256,7 +489,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     style: theme.textTheme.titleLarge,
                   ),
                   Text(
-                    '\$${_totalAmount.toStringAsFixed(2)}',
+                    '\₹${_totalAmount.toStringAsFixed(2)}',
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: theme.colorScheme.primary,
                       fontWeight: FontWeight.bold,
@@ -271,18 +504,67 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
     );
   }
 
-  void _saveInvoice() {
+  Future<void> _saveInvoice() async {
     if (_formKey.currentState!.validate()) {
-      final invoice = {
-        'customerName': _customerNameController.text,
-        'customerNumber': _customerNumberController.text,
-        'customerAddress': _customerAddressController.text,
-        'invoiceNumber': _invoiceNumberController.text,
-        'date': DateFormat('yyyy-MM-dd').format(_selectedDate!),
-        'items': _items.map((item) => item.toMap()).toList(),
-        'total': _totalAmount,
-      };
-      Navigator.pop(context, invoice);
+      if (_items.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please add at least one item')),
+        );
+        return;
+      }
+
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final authState = context.read<AuthCubit>().state;
+        if (authState is! Authenticated) {
+          throw Exception('User not authenticated');
+        }
+
+        // Create invoice items list for model
+        final invoiceItems = _items
+            .map((item) => InvoiceItemModel(
+                  name: item.name,
+                  quantity: item.quantity,
+                  price: item.price,
+                ))
+            .toList();
+
+        // Pass all required parameters to addInvoice method
+        final invoiceCubit = context.read<InvoiceCubit>();
+        await invoiceCubit.addInvoice(
+          customerId: _selectedCustomer?.id ?? '',
+          customerName: _customerNameController.text,
+          customerNumber: _customerNumberController.text,
+          customerAddress: _customerAddressController.text,
+          invoiceNumber: _invoiceNumberController.text,
+          date: _selectedDate!,
+          items: invoiceItems,
+          totalAmount: _totalAmount,
+          status: 'issued',
+        );
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invoice created successfully')),
+        );
+
+        // Return to previous screen
+        Navigator.pop(context);
+      } catch (e) {
+        debugPrint('Error saving invoice: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating invoice: $e')),
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
     }
   }
 }
@@ -348,7 +630,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
-              decoration: InputDecoration(labelText: AppConst.itemName),
+              decoration: const InputDecoration(labelText: AppConst.itemName),
               validator: (value) => value?.isEmpty == true ? 'Required' : null,
             ),
             const SizedBox(height: 12),
@@ -360,18 +642,31 @@ class _AddItemSheetState extends State<_AddItemSheet> {
                     decoration:
                         const InputDecoration(labelText: AppConst.quantity),
                     keyboardType: TextInputType.number,
-                    validator: (value) =>
-                        value?.isEmpty == true ? 'Required' : null,
+                    validator: (value) {
+                      if (value?.isEmpty == true) return 'Required';
+                      final quantity = int.tryParse(value!);
+                      if (quantity == null || quantity <= 0) {
+                        return 'Enter valid quantity';
+                      }
+                      return null;
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextFormField(
                     controller: _priceController,
-                    decoration: InputDecoration(labelText: AppConst.price),
+                    decoration:
+                        const InputDecoration(labelText: AppConst.price),
                     keyboardType: TextInputType.number,
-                    validator: (value) =>
-                        value?.isEmpty == true ? 'Required' : null,
+                    validator: (value) {
+                      if (value?.isEmpty == true) return 'Required';
+                      final price = double.tryParse(value!);
+                      if (price == null || price <= 0) {
+                        return 'Enter valid price';
+                      }
+                      return null;
+                    },
                   ),
                 ),
               ],

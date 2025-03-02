@@ -2,7 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
-import 'package:trust_finiance/models/customer_model.dart';
+import 'package:trust_finiance/models/customer_model/customer_model.dart';
 import 'package:trust_finiance/models/user_model.dart';
 import 'package:uuid/uuid.dart';
 

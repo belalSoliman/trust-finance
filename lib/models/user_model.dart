@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 
 enum UserRole {
   superAdmin,
@@ -45,4 +46,15 @@ class UserModel {
         'role': role.name,
         'isActive': isActive,
       };
+  factory UserModel.fromFirebaseUser(auth.User firebaseUser) {
+    return UserModel(
+      uid: firebaseUser.uid,
+      email: firebaseUser.email ?? '',
+      name: firebaseUser.displayName ??
+          firebaseUser.email?.split('@')[0] ??
+          'User',
+      role: UserRole.cashier, // Default role
+      isActive: true, // Default to active
+    );
+  }
 }

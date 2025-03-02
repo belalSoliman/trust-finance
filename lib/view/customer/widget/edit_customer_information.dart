@@ -5,7 +5,7 @@ import 'package:trust_finiance/cubit/auth_cubit/auth_cubit.dart';
 import 'package:trust_finiance/cubit/auth_cubit/auth_state.dart';
 import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_cubit.dart';
 import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_state.dart';
-import 'package:trust_finiance/models/customer_model.dart';
+import 'package:trust_finiance/models/customer_model/customer_model.dart';
 import 'package:trust_finiance/repos/customer_repo.dart';
 
 class EditCustomerPage extends StatefulWidget {
