@@ -1,39 +1,45 @@
 import 'package:equatable/equatable.dart';
 import 'package:trust_finiance/models/invoice_model.dart';
 
+/// Base class for all invoice-related states.
 abstract class InvoiceState extends Equatable {
   const InvoiceState();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
+/// Initial state when the cubit is created.
 class InvoiceInitial extends InvoiceState {
   const InvoiceInitial();
 }
 
+/// State representing that invoice data is being loaded or processed.
 class InvoiceLoading extends InvoiceState {
   const InvoiceLoading();
 }
 
+/// State emitted when invoices have been successfully loaded.
 class InvoiceLoaded extends InvoiceState {
   final List<InvoiceModel> invoices;
 
   const InvoiceLoaded(this.invoices);
 
   @override
-  List<Object> get props => [invoices];
+  List<Object?> get props => [invoices];
 }
 
-class InvoiceError extends InvoiceState {
-  final String message;
+/// State emitted when a single invoice has been successfully loaded.
+class InvoiceSingleLoaded extends InvoiceState {
+  final InvoiceModel invoice;
 
-  const InvoiceError(this.message);
+  const InvoiceSingleLoaded(this.invoice);
 
   @override
-  List<Object> get props => [message];
+  List<Object?> get props => [invoice];
 }
 
+/// State emitted when an invoice action (create, update, delete) completed successfully.
 class InvoiceActionSuccess extends InvoiceState {
   final String message;
   final InvoiceModel? invoice;
@@ -41,17 +47,15 @@ class InvoiceActionSuccess extends InvoiceState {
   const InvoiceActionSuccess(this.message, [this.invoice]);
 
   @override
-  List<Object> get props => [message]; // Only include non-nullable values
+  List<Object?> get props => [message, invoice];
+}
 
-  // Override equality to account for the nullable invoice
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is InvoiceActionSuccess &&
-        other.message == message &&
-        other.invoice == invoice;
-  }
+/// State representing an error during invoice operations.
+class InvoiceError extends InvoiceState {
+  final String message;
+
+  const InvoiceError(this.message);
 
   @override
-  int get hashCode => message.hashCode ^ (invoice?.hashCode ?? 0);
+  List<Object?> get props => [message];
 }

@@ -4,40 +4,59 @@ import 'package:trust_finiance/cubit/invoice_cuibt/invoice_state.dart';
 import 'package:trust_finiance/models/invoice_model.dart';
 import 'package:trust_finiance/repos/invoice_repo.dart';
 
+/// Cubit for managing invoice-related state and operations.
+///
+/// This cubit handles operations like loading, creating, updating, and deleting invoices,
+/// with proper state transitions to reflect the current operation status.
 class InvoiceCubit extends Cubit<InvoiceState> {
   final InvoiceRepository _invoiceRepository;
 
+  /// Creates an instance of [InvoiceCubit] with a required invoice repository.
+  ///
+  /// The repository is used to perform all data operations related to invoices.
   InvoiceCubit({
     required InvoiceRepository invoiceRepository,
   })  : _invoiceRepository = invoiceRepository,
         super(const InvoiceInitial());
 
-  // Load all invoices
+  /// Loads all invoices for the current user.
+  ///
+  /// Emits [InvoiceLoading] while loading, then either [InvoiceLoaded]
+  /// with the loaded invoices, or [InvoiceError] if loading fails.
   Future<void> loadInvoices() async {
     try {
       emit(const InvoiceLoading());
       final invoices = await _invoiceRepository.getInvoices();
-      emit(InvoiceLoaded(invoices));
+
+      if (!isClosed) {
+        emit(InvoiceLoaded(invoices));
+      }
     } catch (e) {
-      debugPrint('Error in InvoiceCubit.loadInvoices: $e');
-      emit(InvoiceError(e.toString()));
+      _handleError('loadInvoices', e);
     }
   }
 
-  // Load invoices for a specific customer
+  /// Loads invoices for a specific customer.
+  ///
+  /// [customerId] The ID of the customer whose invoices should be loaded.
   Future<void> loadInvoicesForCustomer(String customerId) async {
     try {
       emit(const InvoiceLoading());
       final invoices =
           await _invoiceRepository.getInvoicesForCustomer(customerId);
-      emit(InvoiceLoaded(invoices));
+
+      if (!isClosed) {
+        emit(InvoiceLoaded(invoices));
+      }
     } catch (e) {
-      debugPrint('Error in InvoiceCubit.loadInvoicesForCustomer: $e');
-      emit(InvoiceError(e.toString()));
+      _handleError('loadInvoicesForCustomer', e);
     }
   }
 
-  // Add a new invoice
+  /// Adds a new invoice.
+  ///
+  /// This method creates a new invoice with the provided details and emits
+  /// appropriate states to reflect the operation's progress and result.
   Future<void> addInvoice({
     required String customerId,
     required String customerName,
@@ -50,10 +69,9 @@ class InvoiceCubit extends Cubit<InvoiceState> {
     String status = 'issued',
   }) async {
     try {
-      emit(InvoiceLoading());
+      emit(const InvoiceLoading());
 
-      // This may be calling a method that isn't properly syncing with Firestore
-      await invoiceRepository.addInvoice(
+      final invoice = await _invoiceRepository.addInvoice(
         customerId: customerId,
         customerName: customerName,
         customerNumber: customerNumber,
@@ -65,14 +83,22 @@ class InvoiceCubit extends Cubit<InvoiceState> {
         status: status,
       );
 
-      // Success message is emitted here, but actual operation might have failed
-      emit(InvoiceActionSuccess('Invoice created successfully'));
+      if (!isClosed) {
+        // Emit success state with the created invoice
+        emit(InvoiceActionSuccess('Invoice created successfully', invoice));
+      }
+
+      // Reload the list of invoices to include the new one
+      await loadInvoices();
     } catch (e) {
-      emit(InvoiceError(e.toString()));
+      _handleError('addInvoice', e);
     }
   }
 
-  // Update invoice status
+  /// Updates the status of an existing invoice.
+  ///
+  /// [id] The ID of the invoice to update.
+  /// [status] The new status for the invoice.
   Future<void> updateInvoiceStatus({
     required String id,
     required String status,
@@ -85,32 +111,116 @@ class InvoiceCubit extends Cubit<InvoiceState> {
         status: status,
       );
 
-      // Reload all invoices to update the list
-      final invoices = await _invoiceRepository.getInvoices();
+      if (!isClosed) {
+        // Emit success with the updated invoice
+        emit(InvoiceActionSuccess('Invoice status updated', invoice));
 
-      emit(InvoiceActionSuccess('Invoice status updated', invoice));
-      emit(InvoiceLoaded(invoices));
+        // Reload all invoices to update the list
+        await loadInvoices();
+      }
     } catch (e) {
-      debugPrint('Error in InvoiceCubit.updateInvoiceStatus: $e');
-      emit(InvoiceError(e.toString()));
+      _handleError('updateInvoiceStatus', e);
     }
   }
 
-  // Delete an invoice
+  /// Updates the payment status of an existing invoice.
+  ///
+  /// [id] The ID of the invoice to update.
+  /// [paymentStatus] The new payment status for the invoice.
+  Future<void> updatePaymentStatus({
+    required String id,
+    required String paymentStatus,
+  }) async {
+    try {
+      emit(const InvoiceLoading());
+
+      final invoice = await _invoiceRepository.updatePaymentStatus(
+        id: id,
+        paymentStatus: paymentStatus,
+      );
+
+      if (!isClosed) {
+        // Emit success with the updated invoice
+        emit(InvoiceActionSuccess('Payment status updated', invoice));
+
+        // Reload all invoices to update the list
+        await loadInvoices();
+      }
+    } catch (e) {
+      _handleError('updatePaymentStatus', e);
+    }
+  }
+
+  /// Deletes an invoice.
+  ///
+  /// [id] The ID of the invoice to delete.
   Future<void> deleteInvoice(String id) async {
     try {
       emit(const InvoiceLoading());
 
       await _invoiceRepository.deleteInvoice(id);
 
-      // Reload all invoices to update the list
-      final invoices = await _invoiceRepository.getInvoices();
+      if (!isClosed) {
+        emit(const InvoiceActionSuccess('Invoice deleted successfully'));
 
-      emit(const InvoiceActionSuccess('Invoice deleted successfully'));
-      emit(InvoiceLoaded(invoices));
+        // Reload all invoices to update the list
+        await loadInvoices();
+      }
     } catch (e) {
-      debugPrint('Error in InvoiceCubit.deleteInvoice: $e');
-      emit(InvoiceError(e.toString()));
+      _handleError('deleteInvoice', e);
+    }
+  }
+
+  /// Gets a single invoice by ID.
+  ///
+  /// [id] The ID of the invoice to fetch.
+  /// Returns the invoice or null if not found.
+  Future<void> getInvoiceById(String id) async {
+    try {
+      emit(const InvoiceLoading());
+
+      final invoice = await _invoiceRepository.getInvoiceById(id);
+
+      if (!isClosed) {
+        if (invoice != null) {
+          emit(InvoiceSingleLoaded(invoice));
+        } else {
+          emit(const InvoiceError('Invoice not found'));
+        }
+      }
+    } catch (e) {
+      _handleError('getInvoiceById', e);
+    }
+  }
+
+  /// Forces a sync of any pending (unsynced) invoices with Firestore.
+  ///
+  /// This is useful when coming back online after being offline.
+  Future<void> syncPendingInvoices() async {
+    try {
+      emit(const InvoiceLoading());
+
+      await _invoiceRepository.syncPendingInvoices();
+
+      if (!isClosed) {
+        emit(const InvoiceActionSuccess('Invoices synced successfully'));
+
+        // Reload invoices to get the updated sync status
+        await loadInvoices();
+      }
+    } catch (e) {
+      _handleError('syncPendingInvoices', e);
+    }
+  }
+
+  /// Helper method to handle errors consistently.
+  ///
+  /// [operation] The name of the operation that failed, for logging.
+  /// [error] The error that occurred.
+  void _handleError(String operation, dynamic error) {
+    debugPrint('Error in InvoiceCubit.$operation: $error');
+    if (!isClosed) {
+      emit(InvoiceError(error.toString()));
     }
   }
 }

@@ -9,7 +9,7 @@ import 'package:trust_finiance/view/auth/login_page.dart';
 import 'package:trust_finiance/view/customer/widget/edit_customer_information.dart';
 import 'package:trust_finiance/view/home/home.dart';
 import 'package:trust_finiance/view/home/widget/add_customer.dart';
-import 'package:trust_finiance/view/home/widget/add_invoice.dart';
+import 'package:trust_finiance/view/invoice/add_invoice.dart';
 import 'package:trust_finiance/view/home/widget/add_payment.dart';
 
 class AppRoute {

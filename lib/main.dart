@@ -1,12 +1,13 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:trust_finiance/firebase_options.dart';
 import 'package:trust_finiance/models/customer_model/customer_model.dart';
 import 'package:trust_finiance/models/invoice_model.dart';
 import 'package:trust_finiance/trust_app.dart';
+import 'package:trust_finiance/utils/networt_service.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -15,12 +16,12 @@ void main() async {
   // Initialize Hive - Use Hive.initFlutter() directly for simplicity
   await Hive.initFlutter();
 
-  // Register Hive adapters - this is correct
+  // Register Hive adapters
   Hive.registerAdapter(CustomerModelAdapter());
   Hive.registerAdapter(InvoiceModelAdapter());
   Hive.registerAdapter(InvoiceItemModelAdapter());
 
-  // Open Hive boxes - this is correct
+  // Open Hive boxes
   await Hive.openBox<CustomerModel>('customers');
   await Hive.openBox<InvoiceModel>('invoices');
 
@@ -28,6 +29,13 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize network service
+  final networkService = NetworkStatusService();
+  await networkService.initialize();
+
+  // For development, you can force online mode if needed
+  // networkService.setForceOnline(true);
 
   // Remove splash screen when initialization is complete
   FlutterNativeSplash.remove();
