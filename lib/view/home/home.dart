@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -12,14 +13,46 @@ import 'package:trust_finiance/view/home/widget/current_date.dart';
 import 'package:trust_finiance/view/home/widget/custom_fab.dart';
 import 'package:trust_finiance/view/customer/customer_list.dart';
 
-// In home.dart
-class Home extends StatefulWidget {
-  // Static reference to current state
-  static _HomeState? _instance;
+// Service for managing customer list refreshes
+class CustomerListRefreshService {
+  // Singleton pattern
+  static final CustomerListRefreshService _instance =
+      CustomerListRefreshService._internal();
+  factory CustomerListRefreshService() => _instance;
+  CustomerListRefreshService._internal();
 
-  // Static method to refresh customer list
+  // Stream controller for refresh events
+  final StreamController<int> _refreshController =
+      StreamController<int>.broadcast();
+  Stream<int> get refreshStream => _refreshController.stream;
+
+  // Counter for refresh events
+  int _refreshCount = 0;
+
+  // Method to trigger a refresh
+  void triggerRefresh() {
+    _refreshCount++;
+    debugPrint(
+        'CustomerListRefreshService: Triggering refresh: $_refreshCount');
+    _refreshController.add(_refreshCount);
+  }
+
+  // Clean up resources
+  void dispose() {
+    _refreshController.close();
+  }
+}
+
+class Home extends StatefulWidget {
+  // Static method to refresh customer list from anywhere
   static void refreshCustomerList() {
-    _instance?._refreshTrigger.value += 1;
+    try {
+      debugPrint('Home.refreshCustomerList: Starting refresh...');
+      CustomerListRefreshService().triggerRefresh();
+      debugPrint('Home.refreshCustomerList: Refresh triggered');
+    } catch (e) {
+      debugPrint('Error in Home.refreshCustomerList: $e');
+    }
   }
 
   const Home({super.key});
@@ -29,236 +62,249 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final ValueNotifier<int> _refreshTrigger = ValueNotifier(0);
+  // Stream subscription to listen for refresh events
+  StreamSubscription? _refreshSubscription;
+  int _refreshCount = 0;
+
   @override
   void initState() {
     super.initState();
-    Home._instance = this;
+
+    // Subscribe to refresh events
+    _refreshSubscription =
+        CustomerListRefreshService().refreshStream.listen((count) {
+      if (mounted) {
+        setState(() {
+          _refreshCount = count;
+          debugPrint('Home received refresh event: $_refreshCount');
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
-    if (Home._instance == this) {
-      Home._instance = null;
-    }
-    _refreshTrigger.dispose();
+    // Clean up subscription
+    _refreshSubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth > 600;
     return Scaffold(
       appBar: _buildAppBar(),
       drawer: _buildDrawer(context),
-      body: _buildBody(),
+      body: SafeArea(child: _buildBody()),
       floatingActionButton: FloatingBtn(),
     );
   }
 
   Widget _buildCustomerListSection() {
-    return ValueListenableBuilder<int>(
-      valueListenable: _refreshTrigger,
-      builder: (context, refreshCount, _) {
-        // This print helps debug when refreshes happen
-        debugPrint('Building customer list, refresh count: $refreshCount');
+    // Calculate a fixed height for the customer list section
+    final screenHeight = MediaQuery.of(context).size.height;
+    final listHeight = screenHeight * 0.5; // Use 50% of screen height
 
-        return BlocProvider(
-          // The key forces Flutter to recreate this widget completely when valueListenable changes
-          key: ValueKey('customer_list_$refreshCount'),
-          create: (context) => CustomerCubit(
-            customerRepository: CustomerRepository(
-              currentUser:
-                  (context.read<AuthCubit>().state as Authenticated).user,
-            ),
-          )..loadCustomers(),
-          child: const CustomerList(),
-        );
-      },
-    );
-  }
+    return Container(
+      height: listHeight,
+      child: StreamBuilder<int>(
+        stream: CustomerListRefreshService().refreshStream,
+        initialData: _refreshCount,
+        builder: (context, snapshot) {
+          final refreshCount = snapshot.data ?? 0;
+          debugPrint('Building customer list, refresh count: $refreshCount');
 
-  void refreshCustomerList() {
-    // Increment the value to trigger a rebuild
-    _refreshTrigger.value += 1;
-  }
-}
+          return BlocProvider(
+            key: ValueKey('customer_list_$refreshCount'),
+            create: (context) {
+              debugPrint(
+                  'Creating new CustomerCubit for refresh: $refreshCount');
+              try {
+                final authState = context.read<AuthCubit>().state;
+                if (authState is! Authenticated) {
+                  throw Exception('User not authenticated');
+                }
 
-AppBar _buildAppBar() {
-  return AppBar(
-    title: const Text(AppConst.homeTitle),
-  );
-}
+                final cubit = CustomerCubit(
+                  customerRepository: CustomerRepository(
+                    currentUser: authState.user,
+                  ),
+                );
 
-Widget _buildBody() {
-  return LayoutBuilder(builder: (context, constraints) {
-    // Determine if we're on a tablet/wide screen based on constraints
-    final isWideScreen = constraints.maxWidth > 600;
+                // Load customers after build is complete
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!cubit.isClosed) {
+                    cubit.loadCustomers();
+                  }
+                });
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.all(16.0.r), // Responsive padding with ScreenUtil
-        child: isWideScreen
-            ? _buildWideScreenLayout()
-            : _buildNarrowScreenLayout(),
+                return cubit;
+              } catch (e) {
+                debugPrint('Error creating CustomerCubit: $e');
+                rethrow;
+              }
+            },
+            child: const CustomerList(),
+          );
+        },
       ),
     );
-  });
-}
+  }
 
-Widget _buildNarrowScreenLayout() {
-  return Builder(builder: (context) {
-    final homeState = context.findAncestorStateOfType<_HomeState>();
+  // Other methods moved to class level for better organization
+  AppBar _buildAppBar() {
+    return AppBar(
+      title: const Text(AppConst.homeTitle),
+    );
+  }
 
+  Widget _buildBody() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.all(16.r),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isWideScreen = constraints.maxWidth > 600;
+            return isWideScreen
+                ? _buildWideScreenLayout()
+                : _buildNarrowScreenLayout();
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNarrowScreenLayout() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CurrentDate(),
-        SizedBox(height: 20.h), // Responsive height with ScreenUtil
-        TodaysCollections(),
+        const CurrentDate(),
         SizedBox(height: 20.h),
-        // Use the _buildCustomerListSection method from _HomeState
-        homeState!._buildCustomerListSection(),
+        const TodaysCollections(),
+        SizedBox(height: 20.h),
+        _buildCustomerListSection(),
       ],
     );
-  });
-}
+  }
 
-Widget _buildWideScreenLayout() {
-  return Builder(builder: (context) {
-    final homeState = context.findAncestorStateOfType<_HomeState>();
-
+  Widget _buildWideScreenLayout() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CurrentDate(),
+        const CurrentDate(),
         SizedBox(height: 20.h),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Left side: Today's Collections
-            Expanded(
+            const Expanded(
               flex: 2,
               child: TodaysCollections(),
             ),
-            SizedBox(width: 20.w), // Responsive width spacing
-            // Right side: Customer List
+            SizedBox(width: 20.w),
             Expanded(
               flex: 3,
-              // Use the _buildCustomerListSection method from _HomeState
-              child: homeState!._buildCustomerListSection(),
+              child: _buildCustomerListSection(),
             ),
           ],
         ),
       ],
     );
-  });
-}
+  }
 
-Widget _buildDrawer(BuildContext context) {
-  return BlocBuilder<AuthCubit, AuthState>(
-    builder: (context, state) {
-      final isSuperAdmin = state is Authenticated &&
-          state.user.role.toString() == 'UserRole.superAdmin';
+  Widget _buildDrawer(BuildContext context) {
+    return BlocBuilder<AuthCubit, AuthState>(
+      builder: (context, state) {
+        final isSuperAdmin = state is Authenticated &&
+            state.user.role.toString() == 'UserRole.superAdmin';
 
-      // Debug logging
-      if (state is Authenticated) {
-        debugPrint('Current user details:');
-        debugPrint('Email: ${state.user.email}');
-        debugPrint('Role: ${state.user.role}');
-        debugPrint('Is Super Admin: $isSuperAdmin');
-      }
-
-      return Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    AppConst.appName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (state is Authenticated)
+        return Drawer(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
                     Text(
-                      ' ${state.user.role.name}',
+                      AppConst.appName,
                       style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                ],
-              ),
-            ),
-            // User Management Section for Super Admin
-            if (isSuperAdmin) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  'User Management',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                  ),
+                    const SizedBox(height: 8),
+                    if (state is Authenticated)
+                      Text(
+                        ' ${state.user.role.name}',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                  ],
                 ),
               ),
+              if (isSuperAdmin) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(
+                    'User Management',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.person_add),
+                  title: const Text('Create New User'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CreateUserPage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+              const Divider(),
               ListTile(
-                leading: const Icon(Icons.person_add),
-                title: const Text('Create New User'),
+                leading: const Icon(Icons.logout),
+                title: const Text('Logout'),
                 onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const CreateUserPage(),
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Logout'),
+                      content: const Text('Are you sure you want to logout?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            context.read<AuthCubit>().signOut();
+                          },
+                          child: const Text('Logout'),
+                        ),
+                      ],
                     ),
                   );
                 },
               ),
             ],
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Logout'),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Logout'),
-                    content: const Text('Are you sure you want to logout?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          context.read<AuthCubit>().signOut();
-                        },
-                        child: const Text('Logout'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      );
-    },
-  );
+          ),
+        );
+      },
+    );
+  }
 }

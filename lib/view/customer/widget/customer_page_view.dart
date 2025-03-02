@@ -7,6 +7,7 @@ import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_cubit.dart';
 import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_state.dart';
 import 'package:trust_finiance/repos/customer_repo.dart';
 import 'package:trust_finiance/view/customer/widget/edit_customer_information.dart';
+import 'package:trust_finiance/view/home/home.dart';
 
 class CustomerDetailPage extends StatelessWidget {
   final String customerId;
@@ -381,27 +382,92 @@ class CustomerDetailView extends StatelessWidget {
     );
   }
 
+// In your CustomerDetailView class:
+
   void _confirmDelete(BuildContext context) {
+    final String customerIdToDelete = customerId;
+    final customerCubit = context.read<CustomerCubit>();
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete Customer'),
-        content: Text(
-            'Are you sure you want to delete this customer? This action cannot be undone.'),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Customer'),
+        content: const Text(
+          'Are you sure you want to delete this customer? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('CANCEL'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('CANCEL'),
           ),
           TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              context.read<CustomerCubit>().deleteCustomer(customerId);
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () async {
+              // Close confirmation dialog
+              Navigator.pop(dialogContext);
+
+              try {
+                // Show loading indicator
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (loadingContext) => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+
+                // Delete customer
+                debugPrint(
+                    'Calling deleteCustomer for ID: $customerIdToDelete');
+                await customerCubit.deleteCustomer(customerIdToDelete);
+                debugPrint('Customer deletion completed successfully');
+
+                // Close loading indicator
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+
+                // First notify the home page to refresh BEFORE navigation
+                try {
+                  Home.refreshCustomerList();
+                  debugPrint('Refresh triggered before navigation');
+                } catch (e) {
+                  debugPrint('Error refreshing list: $e');
+                }
+
+                // Then return to previous screen with a short delay to ensure refresh is triggered
+                await Future.delayed(const Duration(milliseconds: 100));
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+
+                  // Show success snackbar after navigation completes
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Customer deleted successfully')),
+                  );
+                }
+              } catch (e) {
+                debugPrint('Error in _confirmDelete: $e');
+
+                // Close loading dialog
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+
+                // Show error message
+                final errorMessage = e.toString();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Error deleting customer: ${errorMessage.length > 100 ? '${errorMessage.substring(0, 100)}...' : errorMessage}',
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
-            child: Text('DELETE'),
+            child: const Text('DELETE'),
           ),
         ],
       ),

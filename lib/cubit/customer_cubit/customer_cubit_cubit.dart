@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_state.dart';
 import 'package:trust_finiance/repos/customer_repo.dart';
@@ -103,15 +104,29 @@ class CustomerCubit extends Cubit<CustomerState> {
   }
 
   // Delete customer (soft delete)
+  // In your CustomerCubit class
   Future<void> deleteCustomer(String id) async {
+    if (isClosed) {
+      debugPrint('Cannot delete: CustomerCubit is already closed');
+      return;
+    }
+
     try {
       emit(const CustomerLoading());
-      await _customerRepository.deleteCustomer(id);
+      debugPrint('Attempting to delete customer with ID: $id');
 
-      emit(const CustomerActionSuccess('Customer deactivated successfully'));
-      loadCustomers(); // Reload the customer list
+      await _customerRepository.deleteCustomer(id);
+      debugPrint('Customer successfully deleted from Firebase: $id');
+
+      if (!isClosed) {
+        emit(const CustomerActionSuccess('Customer deleted successfully'));
+      }
     } catch (e) {
-      emit(CustomerError(e.toString()));
+      debugPrint('Error in CustomerCubit.deleteCustomer: $e');
+      if (!isClosed) {
+        emit(CustomerError(e.toString()));
+      }
+      throw e; // Re-throw to let the UI handle it
     }
   }
 

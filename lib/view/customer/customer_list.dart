@@ -5,7 +5,6 @@ import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_cubit.dart';
 import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_state.dart';
 import 'package:trust_finiance/models/customer_model.dart';
 import 'package:trust_finiance/utils/constant/app_const.dart';
-import 'package:trust_finiance/view/customer/widget/customer_item.dart';
 import 'package:trust_finiance/view/customer/widget/customer_page_view.dart';
 
 class CustomerList extends StatefulWidget {
@@ -16,19 +15,126 @@ class CustomerList extends StatefulWidget {
 }
 
 class _CustomerListState extends State<CustomerList> {
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // Load customers when the widget is first created
-    context.read<CustomerCubit>().loadCustomers();
+
+    // Use post-frame callback to safely access the customer cubit
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _safeLoadCustomers();
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  // Safe method to load customers with error handling
+  void _safeLoadCustomers() {
+    if (!mounted) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final cubit = context.read<CustomerCubit>();
+      if (!cubit.isClosed) {
+        cubit.loadCustomers().then((_) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+          }
+        }).catchError((error) {
+          debugPrint('Error loading customers: $error');
+          if (mounted) {
+            setState(() => _isLoading = false);
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error accessing CustomerCubit: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // Safe search function with error handling
+  void _safeSearch(String query) {
+    if (!mounted) return;
+
+    try {
+      final cubit = context.read<CustomerCubit>();
+      if (!cubit.isClosed) {
+        if (query.isEmpty) {
+          cubit.loadCustomers();
+        } else {
+          cubit.searchCustomers(query);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error searching customers: $e');
+    }
+  }
+
+  // Sort function with error handling
+  void _safeSortCustomers(
+      int Function(CustomerModel, CustomerModel) comparator) {
+    try {
+      final cubit = context.read<CustomerCubit>();
+      if (cubit.isClosed) return;
+
+      final state = cubit.state;
+      if (state is CustomerLoaded) {
+        List<CustomerModel> sortedList = List.from(state.customers);
+        sortedList.sort(comparator);
+        cubit.emit(CustomerLoaded(sortedList));
+      }
+    } catch (e) {
+      debugPrint('Error sorting customers: $e');
+    }
+  }
+
+  void _showSortDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Sort Customers'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Name (A-Z)'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _safeSortCustomers((a, b) => a.name.compareTo(b.name));
+                },
+              ),
+              ListTile(
+                title: const Text('Balance (High to Low)'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _safeSortCustomers((a, b) =>
+                      b.outstandingBalance.compareTo(a.outstandingBalance));
+                },
+              ),
+              ListTile(
+                title: const Text('Balance (Low to High)'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _safeSortCustomers((a, b) =>
+                      a.outstandingBalance.compareTo(b.outstandingBalance));
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -38,13 +144,11 @@ class _CustomerListState extends State<CustomerList> {
     return BlocConsumer<CustomerCubit, CustomerState>(
       listener: (context, state) {
         if (state is CustomerError) {
-          // Show error message
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message)),
           );
         }
         if (state is CustomerActionSuccess) {
-          // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message)),
           );
@@ -53,32 +157,25 @@ class _CustomerListState extends State<CustomerList> {
       builder: (context, state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            // Search bar
+            // Search Bar
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'Search customers...',
-                  prefixIcon: Icon(Icons.search),
+                  prefixIcon: const Icon(Icons.search),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10.r),
                   ),
                   contentPadding: EdgeInsets.symmetric(vertical: 8.h),
                 ),
-                onChanged: (query) {
-                  if (query.isEmpty) {
-                    context.read<CustomerCubit>().loadCustomers();
-                  } else {
-                    context.read<CustomerCubit>().searchCustomers(query);
-                  }
-                },
+                onChanged: _safeSearch,
               ),
             ),
 
-            // Header
+            // Header with sort button
             Padding(
               padding: EdgeInsets.all(16.w),
               child: Row(
@@ -93,8 +190,7 @@ class _CustomerListState extends State<CustomerList> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      // Show customer count when loaded
+                      SizedBox(height: 4.h),
                       if (state is CustomerLoaded)
                         Text(
                           '${state.customers.length} total',
@@ -115,153 +211,161 @@ class _CustomerListState extends State<CustomerList> {
               ),
             ),
 
-            // Customer list
-            if (state is CustomerLoading)
-              Center(
-                child: CircularProgressIndicator(),
-              )
-            else if (state is CustomerLoaded)
-              _buildCustomerList(state.customers)
-            else if (state is CustomerError)
-              Center(
-                child: Text('Error: ${state.message}'),
-              )
-            else if (state is CustomerInitial)
-              Center(
-                child: Text('No customers yet'),
-              ),
+            // Customer List - this needs to be in a container with bounded height
+            Expanded(
+              child: _buildCustomerListContent(state, theme),
+            ),
           ],
         );
       },
     );
   }
 
-  Widget _buildCustomerList(List<CustomerModel> customers) {
-    if (customers.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Center(
+// Extract the customer list content to a separate method for clarity
+  Widget _buildCustomerListContent(CustomerState state, ThemeData theme) {
+    if (_isLoading || state is CustomerLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    } else if (state is CustomerError) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: MainAxisSize
+                .min, // Use min size to avoid expanding unnecessarily
             children: [
               Icon(
-                Icons.person_off,
-                size: 64.sp,
-                color: Colors.grey,
+                Icons.error_outline,
+                size: 48.r,
+                color: theme.colorScheme.error,
               ),
               SizedBox(height: 16.h),
               Text(
-                'No customers found',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  color: Colors.grey,
-                ),
+                'Error loading customers',
+                style: theme.textTheme.bodyLarge,
               ),
               SizedBox(height: 8.h),
-              Text(
-                'Add your first customer by tapping the + button',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: Colors.grey,
-                ),
+              ElevatedButton(
+                onPressed: _safeLoadCustomers,
+                child: const Text('Try Again'),
               ),
             ],
           ),
         ),
       );
-    }
-
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      itemCount: customers.length,
-      itemBuilder: (context, index) {
-        final customer = customers[index];
-        return CustomerItem(
-          name: customer.name,
-          phone: customer.phone,
-          address: customer.address ?? 'No address',
-          balance: customer.outstandingBalance,
-          onTap: () => _navigateToCustomerDetails(customer),
-        );
-      },
-    );
-  }
-
-  void _navigateToCustomerDetails(CustomerModel customer) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CustomerDetailPage(customerId: customer.id),
-      ),
-    );
-  }
-
-  void _showSortDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Sort Customers'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+    } else if (state is CustomerLoaded && state.customers.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Column(
+            mainAxisSize: MainAxisSize
+                .min, // Use min size to avoid expanding unnecessarily
             children: [
-              ListTile(
-                title: Text('Name (A-Z)'),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Implement sorting logic
-                  if (context.read<CustomerCubit>().state is CustomerLoaded) {
-                    List<CustomerModel> sortedList = List.from(
-                        (context.read<CustomerCubit>().state as CustomerLoaded)
-                            .customers);
-                    sortedList.sort((a, b) => a.name.compareTo(b.name));
-                    context
-                        .read<CustomerCubit>()
-                        .emit(CustomerLoaded(sortedList));
-                  }
-                },
+              Icon(
+                Icons.people_outline,
+                size: 48.r,
+                color: theme.colorScheme.primary.withOpacity(0.5),
               ),
-              ListTile(
-                title: Text('Balance (High to Low)'),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Implement sorting logic
-                  if (context.read<CustomerCubit>().state is CustomerLoaded) {
-                    List<CustomerModel> sortedList = List.from(
-                        (context.read<CustomerCubit>().state as CustomerLoaded)
-                            .customers);
-                    sortedList.sort((a, b) =>
-                        b.outstandingBalance.compareTo(a.outstandingBalance));
-                    context
-                        .read<CustomerCubit>()
-                        .emit(CustomerLoaded(sortedList));
-                  }
-                },
-              ),
-              ListTile(
-                title: Text('Balance (Low to High)'),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Implement sorting logic
-                  if (context.read<CustomerCubit>().state is CustomerLoaded) {
-                    List<CustomerModel> sortedList = List.from(
-                        (context.read<CustomerCubit>().state as CustomerLoaded)
-                            .customers);
-                    sortedList.sort((a, b) =>
-                        a.outstandingBalance.compareTo(b.outstandingBalance));
-                    context
-                        .read<CustomerCubit>()
-                        .emit(CustomerLoaded(sortedList));
-                  }
-                },
+              SizedBox(height: 16.h),
+              Text(
+                'No customers found',
+                style: theme.textTheme.bodyLarge,
               ),
             ],
           ),
-        );
-      },
+        ),
+      );
+    } else if (state is CustomerLoaded) {
+      return ListView.builder(
+        itemCount: state.customers.length,
+        itemBuilder: (context, index) {
+          final customer = state.customers[index];
+          return _buildCustomerCard(context, customer);
+        },
+      );
+    } else {
+      return const Center(child: CircularProgressIndicator());
+    }
+  }
+
+  Widget _buildCustomerCard(BuildContext context, CustomerModel customer) {
+    final theme = Theme.of(context);
+
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12.r),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CustomerDetailPage(
+                customerId: customer.id,
+              ),
+            ),
+          );
+        },
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          customer.name,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          customer.phone,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '₹${customer.outstandingBalance.toStringAsFixed(2)}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: customer.outstandingBalance > 0
+                              ? Colors.red.shade700
+                              : Colors.green.shade700,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        'Loans: ₹${customer.totalLoanAmount.toStringAsFixed(0)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
