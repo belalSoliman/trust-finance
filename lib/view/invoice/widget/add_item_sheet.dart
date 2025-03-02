@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trust_finiance/utils/constant/app_const.dart';
 import 'package:trust_finiance/view/invoice/add_invoice.dart';
 
@@ -87,18 +88,6 @@ class _AddItemSheetState extends State<AddItemSheet> {
     }
   }
 
-  void _incrementQuantity() {
-    final currentValue = int.tryParse(_quantityController.text) ?? 0;
-    _quantityController.text = (currentValue + 1).toString();
-  }
-
-  void _decrementQuantity() {
-    final currentValue = int.tryParse(_quantityController.text) ?? 0;
-    if (currentValue > 1) {
-      _quantityController.text = (currentValue - 1).toString();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -150,7 +139,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                 hintText: 'Enter item name',
                 prefixIcon: const Icon(Icons.inventory_2_outlined),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
               ),
               textInputAction: TextInputAction.next,
@@ -162,7 +151,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                 return null;
               },
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16.h),
 
             // Quantity and price row
             Row(
@@ -176,21 +165,6 @@ class _AddItemSheetState extends State<AddItemSheet> {
                     decoration: InputDecoration(
                       labelText: AppConst.quantity,
                       prefixIcon: const Icon(Icons.numbers),
-                      suffixIcon: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.remove),
-                            onPressed: _decrementQuantity,
-                            splashRadius: 20,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.add),
-                            onPressed: _incrementQuantity,
-                            splashRadius: 20,
-                          ),
-                        ],
-                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -213,7 +187,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                     },
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12.w),
 
                 // Price field
                 Expanded(
@@ -262,7 +236,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '₹${_subtotal.toStringAsFixed(2)}',
+                    'EGP${_subtotal.toStringAsFixed(2)}',
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: theme.colorScheme.primary,
                       fontWeight: FontWeight.bold,

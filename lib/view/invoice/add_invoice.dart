@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
@@ -221,9 +222,9 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
             builder: (context, isLoading, _) {
               return IconButton(
                 icon: isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
+                    ? SizedBox(
+                        width: 24.w,
+                        height: 24.h,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.save_rounded),
@@ -272,7 +273,7 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                       child: Row(
                         children: [
                           Icon(Icons.wifi_off, color: Colors.orange.shade800),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8.w),
                           Expanded(
                             child: Text(
                               'You are offline. Invoice will be saved locally and synced when you\'re back online.',
@@ -292,7 +293,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                         _buildInvoiceDetails(theme),
                         const SizedBox(height: 16),
                         _buildItemsList(theme),
-                        const SizedBox(height: 80), // Space for FAB
                       ],
                     ),
                   ),
@@ -301,13 +301,6 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
             ),
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addItem,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text(AppConst.addInvoiceItem),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.onPrimary,
       ),
     );
   }
@@ -549,10 +542,9 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                           final item = items[index];
                           return ListTile(
                             title: Text(item.name),
-                            subtitle:
-                                Text('${item.quantity} x \₹${item.price}'),
+                            subtitle: Text('${item.quantity} x ${item.price}'),
                             trailing: Text(
-                              '\₹${(item.quantity * item.price).toStringAsFixed(2)}',
+                              '${(item.quantity * item.price).toStringAsFixed(2)}',
                               style: theme.textTheme.titleMedium?.copyWith(
                                 color: theme.colorScheme.primary,
                                 fontWeight: FontWeight.bold,
@@ -585,11 +577,13 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                               style: theme.textTheme.titleLarge,
                             ),
                             Text(
-                              '\₹${totalAmount.toStringAsFixed(2)}',
+                              ' ${totalAmount.toStringAsFixed(2)}',
                               style: theme.textTheme.titleLarge?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18.sp),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         );
@@ -597,14 +591,13 @@ class _CreateInvoicePageState extends State<CreateInvoicePage> {
                     ),
                     const SizedBox(height: 16),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         OutlinedButton.icon(
                           onPressed: _addItem,
                           icon: const Icon(Icons.add),
-                          label: const Text('Add More Items'),
+                          label: const Text('Add Items'),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16.w),
                         ElevatedButton.icon(
                           onPressed: _previewInvoice,
                           icon: const Icon(Icons.visibility_outlined),

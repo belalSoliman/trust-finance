@@ -66,8 +66,8 @@ class _CustomerSelectionDialogState extends State<CustomerSelectionDialog> {
       child: Container(
         width: dialogWidth,
         constraints: BoxConstraints(
-          maxWidth: 500, // Maximum width on larger screens
-          maxHeight: dialogHeight,
+          maxWidth: 500.w, // Maximum width on larger screens
+          maxHeight: dialogHeight.h,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -76,16 +76,12 @@ class _CustomerSelectionDialogState extends State<CustomerSelectionDialog> {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'Select Customer',
                     style: theme.textTheme.titleLarge,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                    splashRadius: 24,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ],
               ),
