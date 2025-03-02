@@ -104,7 +104,7 @@ class _HomeState extends State<Home> {
     final screenHeight = MediaQuery.of(context).size.height;
     final listHeight = screenHeight * 0.5; // Use 50% of screen height
 
-    return Container(
+    return SizedBox(
       height: listHeight,
       child: StreamBuilder<int>(
         stream: CustomerListRefreshService().refreshStream,
@@ -163,10 +163,7 @@ class _HomeState extends State<Home> {
         padding: EdgeInsets.all(16.r),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isWideScreen = constraints.maxWidth > 600;
-            return isWideScreen
-                ? _buildWideScreenLayout()
-                : _buildNarrowScreenLayout();
+            return _buildNarrowScreenLayout();
           },
         ),
       ),
@@ -182,30 +179,6 @@ class _HomeState extends State<Home> {
         const TodaysCollections(),
         SizedBox(height: 20.h),
         _buildCustomerListSection(),
-      ],
-    );
-  }
-
-  Widget _buildWideScreenLayout() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const CurrentDate(),
-        SizedBox(height: 20.h),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Expanded(
-              flex: 2,
-              child: TodaysCollections(),
-            ),
-            SizedBox(width: 20.w),
-            Expanded(
-              flex: 3,
-              child: _buildCustomerListSection(),
-            ),
-          ],
-        ),
       ],
     );
   }

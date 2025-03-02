@@ -1,6 +1,7 @@
 //customer model
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
+import 'package:trust_finiance/models/invoice_model.dart';
 
 part 'customer_model.g.dart'; // For Hive type generation
 
@@ -44,52 +45,53 @@ class CustomerModel {
 
   @HiveField(12)
   final bool synced; // Whether this record is synced with Firestore
-
+  @HiveField(13)
+  final List<InvoiceModel>? invoices;
   // Constructor
-  CustomerModel({
-    required this.id,
-    required this.name,
-    required this.phone,
-    this.email,
-    this.address,
-    this.notes,
-    required this.createdAt,
-    this.updatedAt,
-    this.totalLoanAmount = 0.0,
-    this.totalPaidAmount = 0.0,
-    this.isActive = true,
-    required this.createdBy,
-    this.synced = false,
-  });
+  CustomerModel(
+      {required this.id,
+      required this.name,
+      required this.phone,
+      this.email,
+      this.address,
+      this.notes,
+      required this.createdAt,
+      this.updatedAt,
+      this.totalLoanAmount = 0.0,
+      this.totalPaidAmount = 0.0,
+      this.isActive = true,
+      required this.createdBy,
+      this.synced = false,
+      this.invoices});
 
   // Create a copy of this CustomerModel with optional field updates
-  CustomerModel copyWith({
-    String? name,
-    String? phone,
-    String? email,
-    String? address,
-    String? notes,
-    DateTime? updatedAt,
-    double? totalLoanAmount,
-    double? totalPaidAmount,
-    bool? isActive,
-    bool? synced,
-  }) {
+  CustomerModel copyWith(
+      {String? name,
+      String? phone,
+      String? email,
+      String? address,
+      String? notes,
+      DateTime? updatedAt,
+      double? totalLoanAmount,
+      double? totalPaidAmount,
+      bool? isActive,
+      bool? synced,
+      List<InvoiceModel>? invoices}) {
     return CustomerModel(
-      id: id,
-      name: name ?? this.name,
-      phone: phone ?? this.phone,
-      email: email ?? this.email,
-      address: address ?? this.address,
-      notes: notes ?? this.notes,
-      createdAt: createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      totalLoanAmount: totalLoanAmount ?? this.totalLoanAmount,
-      totalPaidAmount: totalPaidAmount ?? this.totalPaidAmount,
-      isActive: isActive ?? this.isActive,
-      createdBy: createdBy,
-      synced: synced ?? this.synced,
-    );
+        id: id,
+        name: name ?? this.name,
+        phone: phone ?? this.phone,
+        email: email ?? this.email,
+        address: address ?? this.address,
+        notes: notes ?? this.notes,
+        createdAt: createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        totalLoanAmount: totalLoanAmount ?? this.totalLoanAmount,
+        totalPaidAmount: totalPaidAmount ?? this.totalPaidAmount,
+        isActive: isActive ?? this.isActive,
+        createdBy: createdBy,
+        synced: synced ?? this.synced,
+        invoices: invoices ?? this.invoices);
   }
 
   // Calculate outstanding balance
@@ -132,6 +134,7 @@ class CustomerModel {
       isActive: data['isActive'] ?? true,
       createdBy: data['createdBy'] ?? '',
       synced: true,
+      invoices: [],
     );
   }
 

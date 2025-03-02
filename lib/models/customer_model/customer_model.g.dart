@@ -30,13 +30,14 @@ class CustomerModelAdapter extends TypeAdapter<CustomerModel> {
       isActive: fields[10] as bool,
       createdBy: fields[11] as String,
       synced: fields[12] as bool,
+      invoices: (fields[13] as List?)?.cast<InvoiceModel>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, CustomerModel obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -62,7 +63,9 @@ class CustomerModelAdapter extends TypeAdapter<CustomerModel> {
       ..writeByte(11)
       ..write(obj.createdBy)
       ..writeByte(12)
-      ..write(obj.synced);
+      ..write(obj.synced)
+      ..writeByte(13)
+      ..write(obj.invoices);
   }
 
   @override

@@ -13,9 +13,9 @@ class CustomerDetailPage extends StatelessWidget {
   final String customerId;
 
   const CustomerDetailPage({
-    Key? key,
+    super.key,
     required this.customerId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,15 +34,18 @@ class CustomerDetailView extends StatelessWidget {
   final String customerId;
 
   const CustomerDetailView({
-    Key? key,
+    super.key,
     required this.customerId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Customer Details'),
+        title: Text(
+          'Customer Details',
+          style: TextStyle(fontSize: 18.sp),
+        ),
         actions: [
           BlocBuilder<CustomerCubit, CustomerState>(
             builder: (context, state) {
@@ -106,14 +109,13 @@ class CustomerDetailView extends StatelessWidget {
             return SingleChildScrollView(
               padding: EdgeInsets.all(16.w),
               child: Column(
+                spacing: 20.h,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildCustomerHeader(context, customer),
-                  SizedBox(height: 24.h),
                   _buildContactInfo(customer),
-                  SizedBox(height: 24.h),
                   _buildFinancialInfo(customer),
-                  SizedBox(height: 24.h),
+                  _buildInvoicesList(customer),
                   if (customer.notes != null && customer.notes!.isNotEmpty)
                     _buildNotes(customer),
                 ],
@@ -473,4 +475,199 @@ class CustomerDetailView extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget _buildInvoicesList(customer) {
+  // Check if customer has invoices
+  final invoices = customer.invoices ?? [];
+
+  return Card(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16.r),
+    ),
+    child: Padding(
+      padding: EdgeInsets.all(16.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Invoices',
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                '${invoices.length} total',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          invoices.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16.h),
+                    child: Text(
+                      'No invoices yet',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                )
+              : ListView.separated(
+                  physics: NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  itemCount: invoices.length,
+                  separatorBuilder: (context, index) => Divider(),
+                  itemBuilder: (context, index) {
+                    final invoice = invoices[index];
+                    return _buildInvoiceItem(context, invoice);
+                  },
+                ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildInvoiceItem(BuildContext context, invoice) {
+  // Calculate if invoice is overdue
+  final bool isOverdue =
+      invoice.dueDate.isBefore(DateTime.now()) && invoice.status != 'paid';
+
+  // Calculate remaining balance
+  final double remainingBalance =
+      invoice.totalAmount - (invoice.paidAmount ?? 0);
+
+  return InkWell(
+    onTap: () {
+      // Navigate to invoice details page
+      // Uncomment when you have an invoice detail page
+      // Navigator.push(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (context) => InvoiceDetailPage(invoiceId: invoice.id),
+      //   ),
+      // );
+    },
+    borderRadius: BorderRadius.circular(8.r),
+    child: Padding(
+      padding: EdgeInsets.symmetric(vertical: 8.h),
+      child: Row(
+        children: [
+          Container(
+            width: 50.w,
+            height: 50.w,
+            decoration: BoxDecoration(
+              color: _getStatusColor(invoice.status).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Center(
+              child: Icon(
+                _getStatusIcon(invoice.status),
+                color: _getStatusColor(invoice.status),
+              ),
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Invoice #${invoice.invoiceNumber}',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  'Due: ${_formatDate(invoice.dueDate)}',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: isOverdue ? Colors.red : Colors.grey,
+                    fontWeight: isOverdue ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '\$${remainingBalance.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                  color: remainingBalance > 0 ? Colors.red : Colors.green,
+                ),
+              ),
+              SizedBox(height: 4.h),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(invoice.status).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+                child: Text(
+                  _capitalizeFirst(invoice.status),
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: _getStatusColor(invoice.status),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+String _formatDate(DateTime date) {
+  return "${date.day}/${date.month}/${date.year}";
+}
+
+Color _getStatusColor(String status) {
+  switch (status.toLowerCase()) {
+    case 'paid':
+      return Colors.green;
+    case 'pending':
+      return Colors.orange;
+    case 'overdue':
+      return Colors.red;
+    default:
+      return Colors.blue;
+  }
+}
+
+IconData _getStatusIcon(String status) {
+  switch (status.toLowerCase()) {
+    case 'paid':
+      return Icons.check_circle;
+    case 'pending':
+      return Icons.hourglass_empty;
+    case 'overdue':
+      return Icons.warning;
+    default:
+      return Icons.receipt;
+  }
+}
+
+String _capitalizeFirst(String text) {
+  if (text == null || text.isEmpty) return '';
+  return text[0].toUpperCase() + text.substring(1);
 }

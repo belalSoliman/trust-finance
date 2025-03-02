@@ -34,9 +34,6 @@ void main() async {
   final networkService = NetworkStatusService();
   await networkService.initialize();
 
-  // For development, you can force online mode if needed
-  // networkService.setForceOnline(true);
-
   // Remove splash screen when initialization is complete
   FlutterNativeSplash.remove();
   runApp(const TrustApp());

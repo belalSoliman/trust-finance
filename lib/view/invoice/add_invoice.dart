@@ -1,7 +1,3 @@
-import 'dart:io';
-import 'dart:math';
-
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -19,7 +15,6 @@ import 'package:trust_finiance/view/invoice/widget/add_item_sheet.dart';
 import 'package:trust_finiance/view/invoice/widget/connection_checker.dart';
 import 'package:trust_finiance/view/invoice/widget/customer_selection_dialog.dart';
 import 'package:trust_finiance/view/invoice/widget/invoice_preview.dart';
-import 'package:uuid/uuid.dart';
 
 class CreateInvoicePage extends StatefulWidget {
   // Optional selected customer to pre-fill data
@@ -31,10 +26,10 @@ class CreateInvoicePage extends StatefulWidget {
   });
 
   @override
-  _CreateInvoicePageState createState() => _CreateInvoicePageState();
+  CreateInvoicePageState createState() => CreateInvoicePageState();
 }
 
-class _CreateInvoicePageState extends State<CreateInvoicePage> {
+class CreateInvoicePageState extends State<CreateInvoicePage> {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers for form fields

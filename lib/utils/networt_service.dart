@@ -19,7 +19,8 @@ class NetworkStatusService {
       debugPrint(
           'NetworkStatusService: Plugin working, initial status: $result');
 
-      _updateConnectionStatus(result != ConnectivityResult.none);
+      final hasConnectivity = result.any((r) => r != ConnectivityResult.none);
+      _updateConnectionStatus(hasConnectivity);
 
       Connectivity()
           .onConnectivityChanged
@@ -56,10 +57,8 @@ class NetworkStatusService {
     if (_pluginFunctional) {
       try {
         final results = await Connectivity().checkConnectivity();
-        final hasConnectivity = results is List
-            ? (results as List<ConnectivityResult>)
-                .any((r) => r != ConnectivityResult.none)
-            : results != ConnectivityResult.none;
+        final hasConnectivity =
+            results.any((r) => r != ConnectivityResult.none);
 
         if (!hasConnectivity) {
           _updateConnectionStatus(false);

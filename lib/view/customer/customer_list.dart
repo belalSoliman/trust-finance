@@ -195,6 +195,7 @@ class _CustomerListState extends State<CustomerList> {
                         Text(
                           '${state.customers.length} total',
                           style: theme.textTheme.bodyMedium?.copyWith(
+                            // ignore: deprecated_member_use
                             color: theme.colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
@@ -265,6 +266,7 @@ class _CustomerListState extends State<CustomerList> {
               Icon(
                 Icons.people_outline,
                 size: 48.r,
+                // ignore: deprecated_member_use
                 color: theme.colorScheme.primary.withOpacity(0.5),
               ),
               SizedBox(height: 16.h),
@@ -333,6 +335,7 @@ class _CustomerListState extends State<CustomerList> {
                         Text(
                           customer.phone,
                           style: theme.textTheme.bodyMedium?.copyWith(
+                            // ignore: deprecated_member_use
                             color: theme.colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
@@ -355,6 +358,7 @@ class _CustomerListState extends State<CustomerList> {
                       Text(
                         'Loans: ₹${customer.totalLoanAmount.toStringAsFixed(0)}',
                         style: theme.textTheme.bodySmall?.copyWith(
+                          // ignore: deprecated_member_use
                           color: theme.colorScheme.onSurface.withOpacity(0.6),
                         ),
                       ),

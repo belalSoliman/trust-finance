@@ -6,7 +6,6 @@ import 'package:trust_finiance/models/user_model.dart'; // Import UserModel
 import 'package:trust_finiance/repos/invoice_repo.dart' show InvoiceRepository;
 import 'package:trust_finiance/utils/navigation/routes.dart';
 import 'package:trust_finiance/view/auth/login_page.dart';
-import 'package:trust_finiance/view/customer/widget/edit_customer_information.dart';
 import 'package:trust_finiance/view/home/home.dart';
 import 'package:trust_finiance/view/home/widget/add_customer.dart';
 import 'package:trust_finiance/view/invoice/add_invoice.dart';
