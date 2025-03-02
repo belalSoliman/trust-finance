@@ -232,32 +232,114 @@ class InvoiceRepository {
     }
   }
 
-  /// Syncs an invoice to Firestore and marks it as synced if successful
-  Future<InvoiceModel> _syncInvoiceToFirestore(InvoiceModel invoice) async {
+// Add this method to your InvoiceRepository class
+
+  /// Update an invoice in local storage
+  Future<void> _updateInvoiceLocally(InvoiceModel invoice) async {
     try {
-      _log('Syncing invoice ${invoice.id} to Firestore');
-
-      // Create a map for Firestore
-      final Map<String, dynamic> invoiceData = invoice.toMap();
-      _log('Invoice data for Firestore: $invoiceData');
-
-      // Add to Firestore with the same ID
-      await _getInvoicesCollection().doc(invoice.id).set(invoiceData);
-
-      _log('Successfully synced invoice ${invoice.id} to Firestore');
-
-      // Mark as synced in local storage
-      final syncedInvoice = invoice.copyWith(synced: true);
-      await _localBox.put(syncedInvoice.id, syncedInvoice);
-
-      return syncedInvoice;
+      _log('Updating invoice ${invoice.id} in local storage');
+      await _localBox.put(invoice.id, invoice);
+      _log('Successfully updated invoice in local storage');
     } catch (e) {
-      _log('Failed to sync invoice to Firestore: $e');
-      if (e is FirebaseException) {
-        _log('Firebase error code: ${e.code}, message: ${e.message}');
+      _log('Error updating invoice in local storage: $e');
+      throw 'Failed to update invoice locally: $e';
+    }
+  }
+
+  /// Syncs an invoice to Firestore and marks it as synced if successful
+  Future<void> _syncInvoiceToFirestore(InvoiceModel invoice) async {
+    try {
+      debugPrint(
+          'InvoiceRepository: Syncing invoice ${invoice.id} to Firestore');
+
+      // Convert to Map
+      final map = invoice.toMap();
+
+      // Log for debugging
+      debugPrint('InvoiceRepository: Invoice data for Firestore: $map');
+
+      // Create reference to invoice document in Firestore
+      final docRef = _firestore
+          .collection('users')
+          .doc(_currentUser.uid)
+          .collection('invoices')
+          .doc(invoice.id);
+
+      // Set the document
+      await docRef.set(map);
+
+      // Update the local copy to mark as synced
+      final updatedInvoice = invoice.copyWith(synced: true);
+      await _updateInvoiceLocally(updatedInvoice);
+
+      debugPrint(
+          'InvoiceRepository: Successfully synced invoice ${invoice.id} to Firestore');
+
+      // Important: Also update the customer-invoice relationship
+      await _addInvoiceToCustomer(updatedInvoice);
+    } catch (e) {
+      debugPrint('InvoiceRepository: Error syncing invoice to Firestore: $e');
+    }
+  }
+
+  Future<void> _addInvoiceToCustomer(InvoiceModel invoice) async {
+    if (invoice.customerId!.isEmpty) {
+      debugPrint(
+          'InvoiceRepository: Warning - customerId is empty, cannot add invoice to customer');
+      return;
+    }
+
+    try {
+      // Reference to the customer document
+      final customerRef = _firestore
+          .collection('users')
+          .doc(_currentUser.uid)
+          .collection('customers')
+          .doc(invoice.customerId);
+
+      // Check if customer exists
+      final customerDoc = await customerRef.get();
+
+      if (!customerDoc.exists) {
+        debugPrint(
+            'InvoiceRepository: Customer not found in Firestore, creating reference document');
+
+        // Create basic customer document if it doesn't exist
+        await customerRef.set({
+          'id': invoice.customerId,
+          'name': invoice.customerName,
+          'phone': invoice.customerNumber,
+          'address': invoice.customerAddress,
+          'invoiceCount': 1,
+          'lastInvoiceDate': Timestamp.fromDate(invoice.date),
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Update existing customer's invoice count and last invoice date
+        await customerRef.update({
+          'invoiceCount': FieldValue.increment(1),
+          'lastInvoiceDate': Timestamp.fromDate(invoice.date),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       }
-      // Return the local invoice, but not synced
-      return invoice;
+
+      // Create or update the customer-invoice relationship
+      final invoiceRef = customerRef.collection('invoices').doc(invoice.id);
+      await invoiceRef.set({
+        'id': invoice.id,
+        'invoiceNumber': invoice.invoiceNumber,
+        'date': Timestamp.fromDate(invoice.date),
+        'totalAmount': invoice.totalAmount,
+        'status': invoice.status,
+        'paymentStatus': invoice.paymentStatus,
+        'createdAt': Timestamp.fromDate(invoice.createdAt),
+      });
+
+      debugPrint(
+          'InvoiceRepository: Added invoice reference to customer ${invoice.customerId}');
+    } catch (e) {
+      debugPrint('InvoiceRepository: Error adding invoice to customer: $e');
     }
   }
 

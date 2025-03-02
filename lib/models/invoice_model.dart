@@ -40,7 +40,7 @@ class InvoiceModel extends HiveObject {
   final DateTime updatedAt;
 
   @HiveField(11)
-  final bool synced;
+  bool synced;
 
   @HiveField(12)
   final String status;
