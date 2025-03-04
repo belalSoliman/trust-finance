@@ -5,7 +5,7 @@ import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:trust_finiance/firebase_options.dart';
 import 'package:trust_finiance/models/customer_model/customer_model.dart';
-import 'package:trust_finiance/models/invoice_model.dart';
+import 'package:trust_finiance/models/invoice_model/invoice_model.dart';
 import 'package:trust_finiance/trust_app.dart';
 import 'package:trust_finiance/utils/networt_service.dart';
 

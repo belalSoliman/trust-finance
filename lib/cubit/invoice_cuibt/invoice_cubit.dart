@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:trust_finiance/cubit/invoice_cuibt/invoice_state.dart';
-import 'package:trust_finiance/models/invoice_model.dart';
+import 'package:trust_finiance/models/invoice_model/invoice_model.dart';
 import 'package:trust_finiance/repos/invoice_repo.dart';
 
 /// Cubit for managing invoice-related state and operations.

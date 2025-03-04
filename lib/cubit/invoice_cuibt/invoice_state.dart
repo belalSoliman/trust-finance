@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:trust_finiance/models/invoice_model.dart';
+import 'package:trust_finiance/models/invoice_model/invoice_model.dart';
 
 /// Base class for all invoice-related states.
 abstract class InvoiceState extends Equatable {

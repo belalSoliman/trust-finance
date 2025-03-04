@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trust_finiance/models/customer_model/customer_model.dart';
-import 'package:trust_finiance/models/invoice_model.dart';
+import 'package:trust_finiance/models/invoice_model/invoice_model.dart';
 
 class CustomerHeaderCard extends StatelessWidget {
   final CustomerModel customer;

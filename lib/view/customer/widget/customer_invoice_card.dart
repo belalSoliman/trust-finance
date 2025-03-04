@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_cubit.dart';
 import 'package:trust_finiance/models/customer_model/customer_model.dart';
-import 'package:trust_finiance/models/invoice_model.dart';
+import 'package:trust_finiance/models/invoice_model/invoice_model.dart';
 
 class CustomerInvoicesCard extends StatelessWidget {
   final CustomerModel customer;

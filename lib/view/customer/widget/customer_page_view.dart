@@ -8,6 +8,7 @@ import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_state.dart';
 import 'package:trust_finiance/models/customer_model/customer_model.dart';
 import 'package:trust_finiance/repos/customer_repo.dart';
 import 'package:trust_finiance/view/customer/widget/customer_header_card.dart';
+import 'package:trust_finiance/view/customer/widget/customer_payment_history_card.dart';
 import 'package:trust_finiance/view/customer/widget/edit_customer_information.dart';
 import 'package:trust_finiance/view/home/home.dart';
 
@@ -129,18 +130,18 @@ class CustomerDetailView extends StatelessWidget {
   }
 
   Widget _buildCustomerContent(BuildContext context, CustomerModel customer) {
+    final invoices = customer.invoices ?? [];
+
     return SingleChildScrollView(
       padding: EdgeInsets.all(16.w),
       child: Column(
+        spacing: 16.h,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CustomerHeaderCard(customer: customer),
-          SizedBox(height: 16.h),
           CustomerContactCard(customer: customer),
-          SizedBox(height: 16.h),
           CustomerFinancialCard(customer: customer),
-          SizedBox(height: 16.h),
-          SizedBox(height: 16.h),
+          CustomerPaymentHistoryCard(invoices: invoices),
           Builder(builder: (context) {
             debugPrint(
                 'Rendering CustomerInvoicesCard with ${customer.invoices?.length ?? 0} invoices');

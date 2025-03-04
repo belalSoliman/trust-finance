@@ -1,7 +1,7 @@
 //customer model
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
-import 'package:trust_finiance/models/invoice_model.dart';
+import 'package:trust_finiance/models/invoice_model/invoice_model.dart';
 
 part 'customer_model.g.dart'; // For Hive type generation
 

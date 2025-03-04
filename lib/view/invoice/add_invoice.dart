@@ -7,7 +7,7 @@ import 'package:trust_finiance/cubit/auth_cubit/auth_state.dart';
 import 'package:trust_finiance/cubit/invoice_cuibt/invoice_cubit.dart';
 import 'package:trust_finiance/cubit/invoice_cuibt/invoice_state.dart';
 import 'package:trust_finiance/models/customer_model/customer_model.dart';
-import 'package:trust_finiance/models/invoice_model.dart';
+import 'package:trust_finiance/models/invoice_model/invoice_model.dart';
 import 'package:trust_finiance/repos/customer_repo.dart';
 import 'package:trust_finiance/utils/constant/app_const.dart';
 import 'package:trust_finiance/view/home/widget/add_customer.dart';
