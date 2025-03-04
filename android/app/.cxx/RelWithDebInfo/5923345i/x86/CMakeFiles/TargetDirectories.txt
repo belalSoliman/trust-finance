@@ -1,0 +1,2 @@
+D:/trust_finiance/android/app/.cxx/RelWithDebInfo/5923345i/x86/CMakeFiles/edit_cache.dir
+D:/trust_finiance/android/app/.cxx/RelWithDebInfo/5923345i/x86/CMakeFiles/rebuild_cache.dir

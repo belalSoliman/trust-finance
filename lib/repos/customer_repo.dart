@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:trust_finiance/models/customer_model/customer_model.dart';
+import 'package:trust_finiance/models/invoice_model.dart';
 import 'package:trust_finiance/models/user_model.dart';
 import 'package:uuid/uuid.dart';
 
@@ -95,34 +96,6 @@ class CustomerRepository {
   }
 
   // Get a specific customer by ID
-  Future<CustomerModel?> getCustomer(String id) async {
-    try {
-      // Check local storage first
-      final localCustomer = _localBox.get(id);
-
-      // Try to get from Firestore if online
-      try {
-        final doc = await _firestore.collection('customers').doc(id).get();
-
-        if (doc.exists) {
-          final customer = CustomerModel.fromFirestore(doc);
-          // Update local storage
-          await _localBox.put(id, customer);
-          return customer;
-        }
-
-        // If not in Firestore but in local storage, return local version
-        return localCustomer;
-      } catch (e) {
-        // Network error, return local version if available
-        debugPrint('Failed to get customer from Firestore: $e');
-        return localCustomer;
-      }
-    } catch (e) {
-      debugPrint('Error getting customer: $e');
-      throw 'Failed to get customer: $e';
-    }
-  }
 
   // Update an existing customer
   Future<CustomerModel> updateCustomer({
@@ -393,6 +366,101 @@ class CustomerRepository {
     } catch (e) {
       debugPrint('Error updating customer payment amount: $e');
       throw 'Failed to update customer payment amount: $e';
+    }
+  }
+
+  // get invoice of the customer
+  // Add this method to your CustomerRepository class
+  Future<List<InvoiceModel>> getInvoicesForCustomer(String customerId) async {
+    try {
+      // Get invoices from Firestore if online
+      try {
+        final snapshot = await _firestore
+            .collection('invoices')
+            .where('customerId', isEqualTo: customerId)
+            .get();
+
+        final invoices = snapshot.docs
+            .map((doc) => InvoiceModel.fromFirestore(doc))
+            .toList();
+
+        // Save invoices to local storage
+        final invoicesBox = await Hive.openBox<InvoiceModel>('invoices');
+        for (final invoice in invoices) {
+          await invoicesBox.put(invoice.id, invoice);
+        }
+
+        return invoices;
+      } catch (e) {
+        debugPrint('Error getting invoices from Firestore: $e');
+
+        // Try to get from local storage
+        final invoicesBox = await Hive.openBox<InvoiceModel>('invoices');
+        return invoicesBox.values
+            .where((invoice) => invoice.customerId == customerId)
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error getting invoices for customer: $e');
+      return [];
+    }
+  }
+
+// Override or modify the getCustomer method to include invoices
+  Future<CustomerModel?> getCustomer(String id) async {
+    try {
+      // Check local storage first
+      final localCustomer = _localBox.get(id);
+
+      // Try to get from Firestore if online
+      try {
+        final doc = await _firestore.collection('customers').doc(id).get();
+
+        if (doc.exists) {
+          final customer = CustomerModel.fromFirestore(doc);
+
+          // Fetch customer's invoices
+          final invoices = await getInvoicesForCustomer(id);
+
+          // Create customer with invoices
+          final updatedCustomer = customer.copyWith(invoices: invoices);
+
+          // Update local storage
+          await _localBox.put(id, updatedCustomer);
+          return updatedCustomer;
+        }
+
+        // If not in Firestore but in local storage, fetch latest invoices anyway
+        if (localCustomer != null) {
+          final invoices = await getInvoicesForCustomer(id);
+          final updatedCustomer = localCustomer.copyWith(invoices: invoices);
+          await _localBox.put(id, updatedCustomer);
+          return updatedCustomer;
+        }
+
+        return localCustomer;
+      } catch (e) {
+        // Network error, return local version if available
+        debugPrint('Failed to get customer from Firestore: $e');
+
+        // If we have a local customer, try to add invoices
+        if (localCustomer != null) {
+          try {
+            final invoices = await getInvoicesForCustomer(id);
+            final updatedCustomer = localCustomer.copyWith(invoices: invoices);
+            await _localBox.put(id, updatedCustomer);
+            return updatedCustomer;
+          } catch (innerErr) {
+            // If we can't get invoices, return customer without them
+            return localCustomer;
+          }
+        }
+
+        return localCustomer;
+      }
+    } catch (e) {
+      debugPrint('Error getting customer: $e');
+      throw 'Failed to get customer: $e';
     }
   }
 }
