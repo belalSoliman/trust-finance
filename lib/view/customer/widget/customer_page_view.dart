@@ -140,8 +140,12 @@ class CustomerDetailView extends StatelessWidget {
           SizedBox(height: 16.h),
           CustomerFinancialCard(customer: customer),
           SizedBox(height: 16.h),
-          CustomerInvoicesCard(customer: customer),
           SizedBox(height: 16.h),
+          Builder(builder: (context) {
+            debugPrint(
+                'Rendering CustomerInvoicesCard with ${customer.invoices?.length ?? 0} invoices');
+            return CustomerInvoicesCard(customer: customer);
+          }),
           if (customer.notes != null && customer.notes!.isNotEmpty)
             CustomerNotesCard(customer: customer),
         ],

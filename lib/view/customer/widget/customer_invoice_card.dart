@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:trust_finiance/cubit/customer_cubit/customer_cubit_cubit.dart';
 import 'package:trust_finiance/models/customer_model/customer_model.dart';
 import 'package:trust_finiance/models/invoice_model.dart';
 
@@ -15,6 +17,7 @@ class CustomerInvoicesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // Get invoices from the customer model
     final invoices = customer.invoices ?? [];
+    debugPrint('Building InvoicesCard with ${invoices.length} invoices');
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -38,6 +41,25 @@ class CustomerInvoicesCard extends StatelessWidget {
                 ),
                 Row(
                   children: [
+                    // Add refresh button
+                    IconButton(
+                      icon: Icon(Icons.refresh, color: Colors.grey),
+                      onPressed: () {
+                        // Show loading indicator
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Refreshing invoices...')),
+                        );
+
+                        // Refresh invoices for this customer
+                        context
+                            .read<CustomerCubit>()
+                            .refreshInvoices(customer.id);
+                      },
+                      tooltip: 'Refresh Invoices',
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(),
+                    ),
+                    SizedBox(width: 8.w),
                     Text(
                       '${invoices.length} total',
                       style: TextStyle(
@@ -46,18 +68,12 @@ class CustomerInvoicesCard extends StatelessWidget {
                       ),
                     ),
                     SizedBox(width: 8.w),
-                    // Add New Invoice button
                     IconButton(
                       icon: Icon(Icons.add_circle_outline,
                           color: Theme.of(context).primaryColor),
                       onPressed: () {
-                        // Navigate to create invoice page
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //     builder: (context) => CreateInvoicePage(customer: customer),
-                        //   ),
-                        // );
+                        // Create new invoice - implement later
+                        _showAddInvoiceDialog(context);
                       },
                       tooltip: 'Create New Invoice',
                       padding: EdgeInsets.zero,
@@ -67,13 +83,15 @@ class CustomerInvoicesCard extends StatelessWidget {
                 ),
               ],
             ),
+
             SizedBox(height: 16.h),
 
-            // Summary of invoice statistics
-            _buildInvoiceStatistics(invoices),
+            // Add invoice statistics if we have invoices
+            if (invoices.isNotEmpty) _buildInvoiceStatistics(invoices),
+
             SizedBox(height: 16.h),
 
-            // Invoice list
+            // Invoice list or empty state
             if (invoices.isEmpty)
               _buildEmptyInvoiceMessage()
             else
@@ -84,6 +102,7 @@ class CustomerInvoicesCard extends StatelessWidget {
     );
   }
 
+  // Add this new method for invoice statistics
   Widget _buildInvoiceStatistics(List<InvoiceModel> invoices) {
     // Calculate statistics
     double totalAmount = 0;
@@ -94,7 +113,6 @@ class CustomerInvoicesCard extends StatelessWidget {
     for (var invoice in invoices) {
       totalAmount += invoice.totalAmount;
 
-      // Add paid amount if available, otherwise consider payment status
       if (invoice.paymentStatus.toLowerCase() == 'paid') {
         paidAmount += invoice.totalAmount;
       }
@@ -111,7 +129,7 @@ class CustomerInvoicesCard extends StatelessWidget {
     }
 
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
         color: Colors.grey.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12.r),
@@ -152,6 +170,22 @@ class CustomerInvoicesCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _showAddInvoiceDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Add New Invoice'),
+        content: Text('Invoice creation will be implemented soon.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -238,26 +272,25 @@ class InvoiceListItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8.r),
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 4.w),
+        padding: EdgeInsets.symmetric(vertical: 8.h),
         child: Row(
           children: [
-            // Icon based on invoice status
+            // Status indicator
             Container(
               width: 50.w,
               height: 50.w,
               decoration: BoxDecoration(
-                color: _getStatusColor(invoice.paymentStatus).withOpacity(0.1),
+                color: _getStatusColor(invoice.paymentStatus, isOverdue)
+                    .withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Center(
                 child: Icon(
                   _getStatusIcon(invoice.paymentStatus, isOverdue),
                   color: _getStatusColor(invoice.paymentStatus, isOverdue),
-                  size: 24.sp,
                 ),
               ),
             ),
-
             SizedBox(width: 12.w),
 
             // Invoice details
@@ -276,7 +309,7 @@ class InvoiceListItem extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        _formatDate(invoice.date),
+                        'Date: ${_formatDate(invoice.date)}',
                         style: TextStyle(
                           fontSize: 12.sp,
                           color: isOverdue ? Colors.red : Colors.grey,
@@ -285,10 +318,10 @@ class InvoiceListItem extends StatelessWidget {
                         ),
                       ),
                       if (isOverdue) ...[
-                        SizedBox(width: 6.w),
+                        SizedBox(width: 4.w),
                         Container(
                           padding: EdgeInsets.symmetric(
-                              horizontal: 6.w, vertical: 2.h),
+                              horizontal: 4.w, vertical: 1.h),
                           decoration: BoxDecoration(
                             color: Colors.red.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(4.r),
@@ -309,7 +342,7 @@ class InvoiceListItem extends StatelessWidget {
               ),
             ),
 
-            // Price and status
+            // Amount and status
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -320,7 +353,9 @@ class InvoiceListItem extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                     color: invoice.paymentStatus.toLowerCase() == 'paid'
                         ? Colors.green
-                        : null,
+                        : isOverdue
+                            ? Colors.red
+                            : Colors.black,
                   ),
                 ),
                 SizedBox(height: 4.h),
@@ -348,7 +383,7 @@ class InvoiceListItem extends StatelessWidget {
     );
   }
 
-  Color _getStatusColor(String status, [bool isOverdue = false]) {
+  Color _getStatusColor(String status, bool isOverdue) {
     if (isOverdue) return Colors.red;
 
     switch (status.toLowerCase()) {
@@ -363,7 +398,7 @@ class InvoiceListItem extends StatelessWidget {
     }
   }
 
-  IconData _getStatusIcon(String status, [bool isOverdue = false]) {
+  IconData _getStatusIcon(String status, bool isOverdue) {
     if (isOverdue) return Icons.warning;
 
     switch (status.toLowerCase()) {
@@ -374,11 +409,11 @@ class InvoiceListItem extends StatelessWidget {
       case 'overdue':
         return Icons.warning;
       default:
-        return Icons.receipt_long;
+        return Icons.receipt;
     }
   }
 
-  String _getStatusText(String status, [bool isOverdue = false]) {
+  String _getStatusText(String status, bool isOverdue) {
     if (isOverdue && status.toLowerCase() != 'paid') {
       return 'OVERDUE';
     }
@@ -392,6 +427,6 @@ class InvoiceListItem extends StatelessWidget {
 
   String _capitalizeFirst(String text) {
     if (text.isEmpty) return '';
-    return text[0].toUpperCase() + text.substring(1).toLowerCase();
+    return text[0].toUpperCase() + text.substring(1);
   }
 }

@@ -463,4 +463,100 @@ class CustomerRepository {
       throw 'Failed to get customer: $e';
     }
   }
+
+  // In your CustomerRepository class
+  Future<List<InvoiceModel>> getCustomerInvoices(String customerId) async {
+    try {
+      debugPrint('Getting invoices for customer: $customerId');
+
+      // First try to get from local storage (Hive)
+      final invoicesBox = await Hive.openBox<InvoiceModel>('invoices');
+
+      // Get all invoices from local storage
+      final allLocalInvoices = invoicesBox.values.toList();
+      debugPrint(
+          'Found ${allLocalInvoices.length} total invoices in local storage');
+
+      // Filter to get only this customer's invoices
+      final customerInvoices = allLocalInvoices
+          .where((invoice) => invoice.customerId == customerId)
+          .toList();
+
+      debugPrint(
+          'Found ${customerInvoices.length} invoices for customer in local storage');
+
+      // If we have local invoices, return them
+      if (customerInvoices.isNotEmpty) {
+        return customerInvoices;
+      }
+
+      // Otherwise try to get from Firestore
+      try {
+        final snapshot = await _firestore
+            .collection('invoices')
+            .where('customerId', isEqualTo: customerId)
+            .get();
+
+        final invoices = snapshot.docs.map((doc) {
+          final data = doc.data();
+          debugPrint('Found invoice in Firestore: ${doc.id}');
+
+          // Convert timestamp to DateTime
+          DateTime? invoiceDate;
+          if (data['date'] is Timestamp) {
+            invoiceDate = (data['date'] as Timestamp).toDate();
+          } else {
+            invoiceDate = DateTime.now();
+          }
+
+          // Convert items
+          List<InvoiceItemModel> items = [];
+          if (data['items'] is List) {
+            items = (data['items'] as List).map((item) {
+              return InvoiceItemModel(
+                name: item['name'] ?? '',
+                price: (item['price'] ?? 0.0).toDouble(),
+                quantity: item['quantity'] ?? 1,
+              );
+            }).toList();
+          }
+
+          return InvoiceModel.create(
+            id: doc.id,
+            customerId: customerId,
+            customerName: data['customerName'] ?? '',
+            customerPhone: data['customerPhone'] ?? '',
+            customerAddress: data['customerAddress'] ?? '',
+            invoiceNumber: data['invoiceNumber'] ?? '',
+            date: invoiceDate,
+            items: items,
+            totalAmount: (data['totalAmount'] ?? 0.0).toDouble(),
+            createdAt: data['createdAt'] is Timestamp
+                ? (data['createdAt'] as Timestamp).toDate()
+                : DateTime.now(),
+            updatedAt: data['updatedAt'] is Timestamp
+                ? (data['updatedAt'] as Timestamp).toDate()
+                : DateTime.now(),
+            status: data['status'] ?? 'issued',
+            userId: data['userId'] ?? '',
+            paymentStatus: data['paymentStatus'] ?? 'pending',
+          );
+        }).toList();
+
+        // Save these invoices to local storage for future use
+        for (var invoice in invoices) {
+          await invoicesBox.put(invoice.id, invoice);
+        }
+
+        debugPrint('Retrieved ${invoices.length} invoices from Firestore');
+        return invoices;
+      } catch (e) {
+        debugPrint('Failed to get invoices from Firestore: $e');
+        return [];
+      }
+    } catch (e) {
+      debugPrint('Error in getCustomerInvoices: $e');
+      return [];
+    }
+  }
 }

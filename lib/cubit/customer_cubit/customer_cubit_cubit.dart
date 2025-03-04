@@ -24,20 +24,6 @@ class CustomerCubit extends Cubit<CustomerState> {
   }
 
   // Get customer details
-  Future<void> loadCustomerDetails(String id) async {
-    try {
-      emit(const CustomerLoading());
-      final customer = await _customerRepository.getCustomer(id);
-
-      if (customer != null) {
-        emit(CustomerDetailLoaded(customer));
-      } else {
-        emit(const CustomerError('Customer not found'));
-      }
-    } catch (e) {
-      emit(CustomerError(e.toString()));
-    }
-  }
 
   // Add a new customer
   Future<void> addCustomer({
@@ -168,6 +154,64 @@ class CustomerCubit extends Cubit<CustomerState> {
     } catch (e) {
       // Maybe show a temporary notification/toast but don't disrupt the UI
       print('Failed to sync customers: $e');
+    }
+  }
+
+  // Get customer details with invoices
+  // Get customer details with invoices
+  Future<void> loadCustomerDetails(String id) async {
+    try {
+      emit(const CustomerLoading());
+
+      debugPrint('Loading customer details for ID: $id');
+      final customer = await _customerRepository.getCustomer(id);
+
+      if (customer == null) {
+        emit(CustomerError('Customer not found'));
+        return;
+      }
+
+      // Load customer's invoices - make sure this method exists in your repository
+      debugPrint('Loading invoices for customer ID: $id');
+      final invoices = await _customerRepository.getCustomerInvoices(id);
+
+      // Create updated customer with invoices
+      final customerWithInvoices = customer.copyWith(invoices: invoices);
+
+      debugPrint('Found ${invoices.length} invoices for customer');
+      emit(CustomerDetailLoaded(customerWithInvoices));
+    } catch (e) {
+      debugPrint('Error loading customer details: $e');
+      emit(CustomerError(e.toString()));
+    }
+  }
+
+  // Add this to your CustomerCubit
+  Future<void> refreshInvoices(String customerId) async {
+    try {
+      debugPrint('Refreshing invoices for customer: $customerId');
+
+      // Force reload invoices from repository
+      final invoices =
+          await _customerRepository.getCustomerInvoices(customerId);
+
+      // Get current state
+      if (state is CustomerDetailLoaded) {
+        final currentState = state as CustomerDetailLoaded;
+        final customer = currentState.customer;
+
+        // Update customer with new invoices
+        final updatedCustomer = customer.copyWith(invoices: invoices);
+
+        debugPrint('Found ${invoices.length} invoices after refresh');
+        emit(CustomerDetailLoaded(updatedCustomer));
+      } else {
+        // If not in detail view, just load full customer details
+        loadCustomerDetails(customerId);
+      }
+    } catch (e) {
+      debugPrint('Error refreshing invoices: $e');
+      // Don't change state on error to avoid disrupting the UI
     }
   }
 }
